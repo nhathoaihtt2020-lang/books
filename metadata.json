@@ -2,6 +2,7 @@
   "name": "Trình Sáng Tác & E-Reader AI",
   "description": "Ứng dụng PWA sáng tác sách dài tập qua Gemini API, xoay vòng API key thông minh, lưu trữ IndexedDB và trình đọc sách chuyên nghiệp mô phỏng Kindle/Apple Books.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
-
