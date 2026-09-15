@@ -826,7 +826,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
           throw err;
         }
 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyObj.key}`;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${keyObj.key}`;
         const payload = {
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
