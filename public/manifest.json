@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Trình Sáng Tác & E-Reader AI",
+  "short_name": "AI Studio",
+  "description": "Ứng dụng PWA sáng tác sách dài tập qua Gemini API, xoay vòng API key thông minh, lưu trữ IndexedDB và trình đọc sách chuyên nghiệp.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbf0d9",
+  "theme_color": "#854d0e",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

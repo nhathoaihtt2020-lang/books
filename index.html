@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trình Sáng Tác & E-Reader AI</title>
+  <meta name="description" content="Ứng dụng PWA sáng tác sách dài tập qua Gemini API, xoay vòng API key thông minh, lưu trữ IndexedDB và trình đọc sách chuyên nghiệp mô phỏng Kindle/Apple Books." />
+  <meta property="og:title" content="Trình Sáng Tác & E-Reader AI" />
+  <meta property="og:description" content="Sáng tác sách dài tập bằng AI, tự động dàn trang và đọc sách chuyên nghiệp." />
+  <link rel="manifest" href="/public/manifest.json" />
+  <meta name="theme-color" content="#854d0e" />
+
+  <!-- Google Fonts: Literata, Lora & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&family=Lora:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Literata"', 'Lora', 'Georgia', 'serif'],
+            reading: ['"Literata"', 'Lora', 'serif']
+          },
+          colors: {
+            sepia: {
+              50: '#fdfbf7',
+              100: '#fbf0d9',
+              200: '#f3dfb4',
+              300: '#e5ca93',
+              700: '#8c6b41',
+              800: '#5f4b32',
+              900: '#3d301f',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- External Libraries CDNs -->
+  <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Custom Scrollbar & E-Reader Styles */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.7); }
+    
+    .reader-page p {
+      margin-bottom: 1.5rem;
+      line-height: inherit;
+      text-align: justify;
+      text-indent: 1.75rem;
+    }
+    .reader-page p:first-of-type {
+      text-indent: 0;
+    }
+    .reader-page p:empty {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-stone-50 text-stone-900 font-sans min-h-screen antialiased flex flex-col selection:bg-amber-200">
+
+  <!-- Top App Navigation -->
+  <header id="app-header" class="border-b border-stone-200 bg-white/95 backdrop-blur sticky top-0 z-30 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-900 text-amber-100 flex items-center justify-center font-bold shadow-sm ring-1 ring-amber-950/10">
+          <i data-lucide="book-open" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-stone-900 text-base sm:text-lg tracking-tight">Trình Sáng Tác & E-Reader AI</h1>
+            <span class="text-xs bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded-full">PWA Client-Side</span>
+          </div>
+          <p id="header-book-title" class="text-xs text-stone-500 truncate max-w-[200px] sm:max-w-sm">Chưa chọn dự án</p>
+        </div>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <nav class="flex items-center gap-1 sm:gap-2">
+        <button id="nav-btn-settings" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 bg-stone-100 text-stone-900">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span class="hidden md:inline">Cài đặt & Keys</span>
+        </button>
+        <button id="nav-btn-workspace" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100">
+          <i data-lucide="pen-tool" class="w-4 h-4"></i>
+          <span class="hidden md:inline">Biên Tập & Viết</span>
+        </button>
+        <button id="nav-btn-reader" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100">
+          <i data-lucide="book" class="w-4 h-4"></i>
+          <span>Trình Đọc Sách</span>
+        </button>
+        <button id="nav-btn-export" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 text-amber-800 bg-amber-50 hover:bg-amber-100">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Xuất Bản</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Live Key Pool Notification Bar -->
+  <div id="key-pool-banner" class="hidden bg-amber-500 text-amber-950 px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-between border-b border-amber-600/30">
+    <div class="flex items-center gap-2 max-w-7xl mx-auto w-full">
+      <i data-lucide="clock" class="w-4 h-4 animate-spin"></i>
+      <span id="key-pool-banner-text">Toàn bộ API Key đang bị phạt tạm thời. Đang chờ mở khóa key tiếp theo trong 00:00...</span>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col">
+
+    <!-- VIEW 1: SETTINGS & KEY POOL -->
+    <section id="view-settings" class="space-y-6">
+      <!-- Top Overview Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
+        <div>
+          <h2 class="text-xl font-bold text-stone-900">Quản Lý Dự Án & Pool API Key</h2>
+          <p class="text-xs sm:text-sm text-stone-500 mt-0.5">Xoay vòng thông minh nhiều API Key Gemini với cơ chế phạt lũy tiến chống 429 và nạp ADN văn phong.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-new-project" class="px-3.5 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Tạo Dự Án Mới
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: API Key Pool -->
+        <div class="lg:col-span-5 space-y-5">
+          <div class="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i data-lucide="key" class="w-5 h-5 text-amber-700"></i>
+                <h3 class="font-bold text-stone-900 text-sm sm:text-base">Pool API Key Gemini</h3>
+              </div>
+              <span id="keys-count-badge" class="text-xs bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full font-medium">0 keys</span>
+            </div>
+
+            <p class="text-xs text-stone-500 leading-relaxed">
+              Nhập danh sách Google Gemini API Key (mỗi dòng một key). Hệ thống tự xoay ngẫu nhiên các key active và phạt 2p / 10p / 60p khi gặp mã 429 (Rate Limit).
+            </p>
+
+            <div class="space-y-2">
+              <textarea id="input-api-keys" rows="3" placeholder="AIzaSy...&#10;AIzaSy...&#10;AIzaSy..." class="w-full text-xs font-mono p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none placeholder:text-stone-400"></textarea>
+              <div class="flex items-center justify-between">
+                <button id="btn-add-keys" class="px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white text-xs font-medium rounded-lg flex items-center gap-1.5 transition">
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                  Thêm Vào Pool
+                </button>
+                <button id="btn-clear-keys" class="text-xs text-stone-400 hover:text-red-600 transition">
+                  Xóa tất cả
+                </button>
+              </div>
+            </div>
+
+            <!-- Keys List Table -->
+            <div class="space-y-2 pt-2 border-t border-stone-100">
+              <div class="flex items-center justify-between text-xs font-semibold text-stone-500 px-1">
+                <span>Danh sách Key</span>
+                <span>Trạng thái</span>
+              </div>
+              <div id="keys-list-container" class="max-h-56 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                <!-- Dynamic key items will render here -->
+                <div class="p-3 text-center text-stone-400 bg-stone-50 rounded-lg text-xs">Chưa có API key nào. Vui lòng thêm key ở trên.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sample File ADN Extractor -->
+          <div class="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm space-y-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="file-text" class="w-5 h-5 text-amber-700"></i>
+              <h3 class="font-bold text-stone-900 text-sm sm:text-base">Nạp File Mẫu Trích Xuất ADN Văn Phong</h3>
+            </div>
+            <p class="text-xs text-stone-500">
+              Tải lên tác phẩm mẫu (.txt, .docx, .epub) để AI phân tích nhịp điệu, cách dùng từ và tỷ lệ miêu tả/đối thoại hướng dẫn viết phỏng theo 50-60%.
+            </p>
+
+            <div id="dropzone" class="border-2 border-dashed border-stone-300 hover:border-amber-700 bg-stone-50 rounded-xl p-4 text-center cursor-pointer transition">
+              <input type="file" id="file-sample-input" accept=".txt,.docx,.epub" class="hidden" />
+              <i data-lucide="upload-cloud" class="w-8 h-8 text-stone-400 mx-auto mb-1"></i>
+              <p class="text-xs font-medium text-stone-700">Kéo thả file vào đây hoặc <span class="text-amber-800 underline">chọn file</span></p>
+              <p class="text-[10px] text-stone-400 mt-0.5">Hỗ trợ .TXT, .DOCX (Mammoth), .EPUB (JSZip)</p>
+            </div>
+
+            <div id="sample-extracted-box" class="hidden p-3 bg-amber-50/60 border border-amber-200/70 rounded-xl text-xs space-y-1">
+              <div class="flex items-center justify-between text-amber-900 font-semibold">
+                <span>ADN Phong Cách Đã Trích Xuất:</span>
+                <span id="sample-filename" class="text-[10px] font-mono text-amber-700"></span>
+              </div>
+              <p id="sample-extracted-text" class="text-stone-700 italic text-[11px] leading-relaxed"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Book Project Metadata -->
+        <div class="lg:col-span-7">
+          <form id="form-project" class="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-5">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div class="flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-5 h-5 text-amber-700"></i>
+                <h3 class="font-bold text-stone-900 text-sm sm:text-base">Thông Số Dự Án Sách Dài Tập</h3>
+              </div>
+              <span id="genre-group-pill" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800">
+                Nhóm 1: Sáng Tác Hư Cấu
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-stone-700">Tên Tác Phẩm / Sách *</label>
+                <input type="text" id="input-book-title" required placeholder="Ví dụ: Bóng Đêm Thành Cổ" class="w-full text-xs sm:text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-stone-700">Tác Giả *</label>
+                <input type="text" id="input-book-author" required placeholder="Ví dụ: Trần Quốc Vũ" class="w-full text-xs sm:text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+              </div>
+            </div>
+
+            <!-- Genre Selection with 10 Presets in 2 Groups -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-stone-700">Thể Loại Sách & Preset Văn Phong (10 Presets)</label>
+                <span id="genre-rule-alert" class="text-[11px] text-stone-500 font-normal"></span>
+              </div>
+              <select id="select-genre" class="w-full text-xs sm:text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none font-medium">
+                <optgroup label="NHÓM 1: SÁNG TÁC HƯ CẤU (FICTION - Nghệ thuật dẫn dắt)">
+                  <option value="detective" selected>1. Trinh thám / Giật gân (Sắc bén, nhịp dồn dập, giác quan hiện trường)</option>
+                  <option value="horror">2. Kinh dị / Tâm linh (U ám, chậm rãi, bất an tâm lý vô hình)</option>
+                  <option value="scifi">3. Khoa học viễn tưởng - Sci-Fi (Logic kỹ thuật, phản địa đàng/công nghệ)</option>
+                  <option value="urban">4. Đô thị / Đời sống / Hiện thực (Chân thực, mâu thuẫn xã hội & cơm áo gạo tiền)</option>
+                  <option value="fantasy">5. Kỳ ảo phương Tây - High Fantasy (Sử thi, trang trọng, thế giới quan rộng lớn)</option>
+                  <option value="romance">6. Lãng mạn / Ngôn tình (Mượt mà, tinh tế, giàu cảm xúc, tương tác vi mô)</option>
+                  <option value="selfhelp">7. Phát triển bản thân - Self-Help (Truyền cảm hứng, luận điểm - bài học - thực hành)</option>
+                </optgroup>
+                <optgroup label="NHÓM 2: TÀI LIỆU CHUẨN XÁC 100% (STRICT FACTUAL / ZERO HALLUCINATION)">
+                  <option value="history">8. Lịch sử (Trang nghiêm, niên hiệu/địa danh/chính sử 100% không hư cấu)</option>
+                  <option value="science">9. Khoa học (Logic, định lý, công thức, thực nghiệm chuẩn mực)</option>
+                  <option value="medicine">10. Y học & Sức khỏe (Thực chứng y khoa, giải phẫu, cơ chế bệnh học chính thống)</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Factual Zero-Hallucination Warning Banner -->
+            <div id="factual-warning-banner" class="hidden p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 space-y-1">
+              <div class="flex items-center gap-1.5 font-bold">
+                <i data-lucide="shield-alert" class="w-4 h-4 text-red-700"></i>
+                <span>ĐIỀU KHOẢN CẤM BỊA ĐẶT TUYỆT ĐỐI (ZERO HALLUCINATION ĐÃ KÍCH HOẠT)</span>
+              </div>
+              <p class="text-[11px] text-red-800 leading-relaxed">
+                Tất cả mốc sự kiện, số liệu, tên tuổi, công thức hoặc chứng cứ y học/lịch sử/khoa học được ràng buộc đối chiếu sự thật 100%. Cấm bịa đặt tình tiết giật gân sai lệch thực tế.
+              </p>
+            </div>
+
+            <!-- Plot Summary -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-stone-700">Cốt Truyện / Đề Cương / Ý Tưởng Trọng Tâm *</label>
+              <textarea id="input-plot-summary" rows="3" required placeholder="Tóm tắt ngắn gọn xung đột trung tâm, các nhân vật chính hoặc nội dung bộ tài liệu..." class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none"></textarea>
+            </div>
+
+            <!-- Numbers config -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-stone-700">Tổng Số Chương</label>
+                <input type="number" id="input-total-chapters" min="1" max="50" value="5" class="w-full text-xs sm:text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-stone-700">Số Từ Mỗi Chương (Dự kiến)</label>
+                <input type="number" id="input-words-per-chapter" min="300" max="5000" step="100" value="1200" class="w-full text-xs sm:text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+              </div>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-3">
+              <button type="submit" id="btn-generate-bible" class="w-full sm:w-auto px-6 py-3 bg-amber-900 hover:bg-amber-950 text-white font-semibold rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i>
+                <span>Khởi Tạo Hồ Sơ Gốc (Master Bible) & Dàn Ý AI</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: WORKSPACE VIẾT & ĐIỀU KHIỂN -->
+    <section id="view-workspace" class="hidden space-y-6">
+      <!-- Workspace Action Bar -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div id="workspace-cover-thumbnail" class="w-12 h-16 rounded-lg bg-stone-100 border border-stone-200 overflow-hidden shrink-0 flex items-center justify-center">
+            <i data-lucide="image" class="w-6 h-6 text-stone-300"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="workspace-title" class="text-lg font-bold text-stone-900">Tên Tác Phẩm</h2>
+              <span id="workspace-status-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 font-medium">Đã lập dàn ý</span>
+            </div>
+            <p id="workspace-author-genre" class="text-xs text-stone-500 mt-0.5">Tác giả • Thể loại</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Auto-Pilot Button -->
+          <button id="btn-autopilot" class="px-4 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition shadow-sm">
+            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            <span id="btn-autopilot-text">Chạy Auto-Pilot Tự Động Viết</span>
+          </button>
+          <button id="btn-regen-cover" class="px-3.5 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition">
+            <i data-lucide="palette" class="w-4 h-4 text-amber-700"></i>
+            <span>Vẽ Lại Bìa Sách</span>
+          </button>
+          <button id="btn-switch-reader-from-ws" class="px-3.5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition shadow-sm">
+            <i data-lucide="book-open" class="w-4 h-4 text-amber-300"></i>
+            <span>Đọc Sách Ngay</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Auto-Pilot Progress Bar -->
+      <div id="autopilot-progress-container" class="hidden bg-white rounded-2xl p-4 border border-amber-200 bg-amber-50/50 shadow-sm space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-amber-950">
+          <div class="flex items-center gap-2">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-600"></span>
+            </span>
+            <span id="autopilot-status-message">Đang viết tự động...</span>
+          </div>
+          <span id="autopilot-percentage">0%</span>
+        </div>
+        <div class="w-full bg-amber-200/60 rounded-full h-2 overflow-hidden">
+          <div id="autopilot-progress-bar" class="bg-amber-700 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Master Bible & Cover Details -->
+        <div class="lg:col-span-4 space-y-5">
+          <!-- Book Cover Card -->
+          <div class="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-stone-900 text-sm flex items-center gap-2">
+                <i data-lucide="image" class="w-4 h-4 text-amber-700"></i>
+                Ảnh Bìa Tác Phẩm
+              </h3>
+              <a id="link-download-cover" href="#" download="cover.png" class="text-xs text-amber-800 hover:underline hidden">Tải ảnh</a>
+            </div>
+            <div class="aspect-[2/3] w-full max-w-[240px] mx-auto rounded-xl overflow-hidden bg-stone-100 border border-stone-200 shadow-md relative group">
+              <img id="workspace-cover-img" src="" alt="Bìa sách" class="w-full h-full object-cover hidden" />
+              <div id="workspace-cover-placeholder" class="w-full h-full flex flex-col items-center justify-center p-4 text-center text-stone-400 space-y-2">
+                <i data-lucide="sparkles" class="w-8 h-8 text-amber-600/60"></i>
+                <span class="text-xs">Đang chờ tạo ảnh bìa...</span>
+              </div>
+            </div>
+            <p id="workspace-cover-prompt" class="text-[11px] text-stone-500 italic bg-stone-50 p-2.5 rounded-lg border border-stone-100 line-clamp-3"></p>
+          </div>
+
+          <!-- Master Bible Accordion / Info -->
+          <div class="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm space-y-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="bookmark" class="w-4 h-4 text-amber-700"></i>
+              <h3 class="font-bold text-stone-900 text-sm">Hồ Sơ Gốc (Master Bible)</h3>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <span class="font-semibold text-stone-700 block mb-0.5">Ngôi Kể (POV):</span>
+                <p id="bible-pov" class="text-stone-600 bg-stone-50 p-2 rounded-lg border border-stone-100">Ngôi thứ ba</p>
+              </div>
+              <div>
+                <span class="font-semibold text-stone-700 block mb-0.5">Quy Chuẩn Văn Phong:</span>
+                <p id="bible-style" class="text-stone-600 bg-stone-50 p-2 rounded-lg border border-stone-100 text-[11px] leading-relaxed max-h-32 overflow-y-auto">Chưa tạo</p>
+              </div>
+              <div>
+                <span class="font-semibold text-stone-700 block mb-0.5">Bảng Quy Tắc Danh Xưng Nhân Vật:</span>
+                <div id="bible-addressing-container" class="space-y-1 max-h-40 overflow-y-auto pr-1">
+                  <!-- Dynamic rules -->
+                  <p class="text-stone-400 italic text-[11px]">Chưa có quy tắc</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Chapters List -->
+        <div class="lg:col-span-8 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-stone-900 text-base flex items-center gap-2">
+              <i data-lucide="list-ordered" class="w-5 h-5 text-amber-700"></i>
+              Danh Mục Chương & Tiến Độ
+            </h3>
+            <span id="chapters-stat-badge" class="text-xs bg-stone-100 text-stone-700 px-3 py-1 rounded-full font-medium">0 / 0 chương hoàn thành</span>
+          </div>
+
+          <div id="chapters-list-container" class="space-y-3">
+            <!-- Dynamic chapter cards will be rendered here -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: TRÌNH ĐỌC SÁCH CHUYÊN NGHIỆP (KINDLE / APPLE BOOKS MODE) -->
+    <section id="view-reader" class="hidden flex-1 flex flex-col">
+      <!-- Reader Floating Top Control Toolbar -->
+      <div id="reader-toolbar" class="sticky top-16 z-20 transition-all duration-200 border-b border-stone-200 bg-white/95 backdrop-blur py-2.5 px-4 mb-4 rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <!-- Left: Chapter Switcher & TOC -->
+        <div class="flex items-center gap-2">
+          <button id="reader-btn-toc" class="p-2 rounded-xl text-stone-700 hover:bg-stone-100 transition flex items-center gap-1.5 text-xs font-semibold" title="Mục lục chương">
+            <i data-lucide="menu" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Mục Lục</span>
+          </button>
+          <div class="h-4 w-px bg-stone-200"></div>
+          <span id="reader-current-chapter-title" class="text-xs sm:text-sm font-bold text-stone-900 truncate max-w-[180px] sm:max-w-xs">Chương 1</span>
+        </div>
+
+        <!-- Middle: Reader Typography & Theme Controls -->
+        <div class="flex items-center gap-2 sm:gap-4">
+          <!-- Font Size Adjuster -->
+          <div class="flex items-center bg-stone-100 rounded-xl p-1 gap-1">
+            <button id="reader-btn-font-dec" class="px-2 py-0.5 text-xs font-bold hover:bg-white rounded-lg transition" title="Giảm cỡ chữ">A-</button>
+            <span id="reader-font-size-label" class="text-[11px] font-mono px-1">18px</span>
+            <button id="reader-btn-font-inc" class="px-2 py-0.5 text-xs font-bold hover:bg-white rounded-lg transition" title="Tăng cỡ chữ">A+</button>
+          </div>
+
+          <!-- Line Height Adjuster -->
+          <button id="reader-btn-line-height" class="p-2 rounded-xl text-stone-700 hover:bg-stone-100 text-xs font-semibold flex items-center gap-1" title="Giãn dòng">
+            <i data-lucide="align-justify" class="w-4 h-4"></i>
+            <span id="reader-line-height-label" class="text-[11px]">1.8</span>
+          </button>
+
+          <!-- Theme Pickers (Light, Sepia, Dark) -->
+          <div class="flex items-center gap-1.5 p-1 bg-stone-100 rounded-xl">
+            <button id="reader-theme-light" class="w-6 h-6 rounded-lg bg-white border border-stone-300 shadow-xs focus:ring-2 ring-amber-600" title="Chủ đề Sáng (Light)"></button>
+            <button id="reader-theme-sepia" class="w-6 h-6 rounded-lg bg-[#fbf0d9] border border-[#d3c29f] shadow-xs focus:ring-2 ring-amber-600" title="Chủ đề Giấy Cổ Điển (Sepia)"></button>
+            <button id="reader-theme-dark" class="w-6 h-6 rounded-lg bg-[#181818] border border-stone-700 shadow-xs focus:ring-2 ring-amber-600" title="Chủ đề Đêm (Dark)"></button>
+          </div>
+        </div>
+
+        <!-- Right: Fullscreen & Navigation -->
+        <div class="flex items-center gap-2">
+          <button id="reader-btn-prev" class="p-2 rounded-xl text-stone-700 hover:bg-stone-100 transition disabled:opacity-30" title="Chương trước">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <button id="reader-btn-next" class="p-2 rounded-xl text-stone-700 hover:bg-stone-100 transition disabled:opacity-30" title="Chương kế tiếp">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <div class="h-4 w-px bg-stone-200"></div>
+          <button id="reader-btn-fullscreen" class="p-2 rounded-xl text-stone-700 hover:bg-stone-100 transition" title="Toàn màn hình">
+            <i data-lucide="maximize-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Reader Canvas Wrapper -->
+      <div id="reader-canvas-container" class="flex-1 rounded-3xl p-6 sm:p-12 md:p-16 transition-colors duration-300 shadow-md bg-white text-stone-900 border border-stone-200/80 flex flex-col items-center">
+        <article id="reader-content-body" class="w-full max-w-2xl mx-auto font-reading text-lg leading-relaxed reader-page selection:bg-amber-300/60">
+          <header class="mb-10 text-center border-b border-stone-200/50 pb-6">
+            <h2 id="reader-display-chapter-title" class="text-2xl sm:text-3xl font-bold font-serif mb-2 tracking-tight">Chương 1: Mở Đầu</h2>
+            <p id="reader-display-book-meta" class="text-xs text-stone-500 font-sans uppercase tracking-widest">Tác phẩm • Tác giả</p>
+          </header>
+
+          <div id="reader-text-container" class="space-y-4">
+            <p class="text-center text-stone-400 py-12 italic">Nội dung chương chưa được khởi tạo hoặc chưa viết xong.</p>
+          </div>
+
+          <!-- Bottom Chapter End Navigation -->
+          <footer class="mt-16 pt-8 border-t border-stone-200/60 flex items-center justify-between font-sans text-xs text-stone-500">
+            <button id="reader-footer-prev" class="flex items-center gap-1.5 hover:text-stone-900 font-medium transition">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              <span>Chương trước</span>
+            </button>
+            <span id="reader-progress-page-indicator">1 / 1</span>
+            <button id="reader-footer-next" class="flex items-center gap-1.5 hover:text-stone-900 font-medium transition">
+              <span>Chương sau</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </footer>
+        </article>
+      </div>
+    </section>
+
+    <!-- VIEW 4: XUẤT BẢN TRỌN BỘ (EXPORT VIEW) -->
+    <section id="view-export" class="hidden space-y-6">
+      <div class="pb-4 border-b border-stone-200">
+        <h2 class="text-xl font-bold text-stone-900">Xuất Bản & Đóng Gói Tác Phẩm</h2>
+        <p class="text-xs sm:text-sm text-stone-500 mt-0.5">Tự động chèn ảnh bìa chuẩn, định dạng trang sách, chia ngắt chương (Page Break) và xuất ra file Word hoặc eBook mở trên Apple Books / Kindle.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- DOCX Card -->
+        <div class="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+              <i data-lucide="file-text" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-stone-900">Tải Toàn Bộ Sách (.DOCX)</h3>
+            <p class="text-xs text-stone-500 leading-relaxed">
+              Tạo file Microsoft Word chuẩn với thư viện <code>docx.js</code>: Trang đầu tiên hiển thị trang trọng ảnh bìa tác phẩm, tên sách và tác giả; tự động ngắt trang (Page Break) chuẩn mực giữa các chương.
+            </p>
+            <ul class="text-xs text-stone-600 space-y-1.5 list-disc list-inside">
+              <li>Nhúng ảnh bìa gốc Base64 vào Trang 1</li>
+              <li>Chèn Page Break trước mỗi chương mới</li>
+              <li>Font chuẩn Literata / Times New Roman, dãn dòng 1.5</li>
+            </ul>
+          </div>
+          <button id="btn-export-full-docx" class="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition shadow-sm">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Tải Xuống File .DOCX</span>
+          </button>
+        </div>
+
+        <!-- EPUB Card -->
+        <div class="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
+              <i data-lucide="book-marked" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-stone-900">Tải Toàn Bộ Sách (.EPUB)</h3>
+            <p class="text-xs text-stone-500 leading-relaxed">
+              Tự động đóng gói cấu trúc EPUB v3.0 tiêu chuẩn bằng <code>JSZip</code> + <code>FileSaver.js</code>: Bao gồm <code>mimetype</code>, <code>META-INF/container.xml</code>, <code>content.opf</code>, mục lục <code>toc.ncx</code>, trang bìa <code>cover.xhtml</code> và từng chương <code>chapter-N.xhtml</code>.
+            </p>
+            <ul class="text-xs text-stone-600 space-y-1.5 list-disc list-inside">
+              <li>Tương thích 100% Apple Books, Kindle, Moon+ Reader, Kobo</li>
+              <li>Tích hợp mục lục TOC nhảy nhanh từng chương</li>
+              <li>Nhúng metadata tác giả, ngày xuất bản và bìa sách</li>
+            </ul>
+          </div>
+          <button id="btn-export-full-epub" class="w-full py-3 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition shadow-sm">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Tải Xuống File .EPUB</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Backup / Restore Project Data -->
+      <div class="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="database" class="w-5 h-5 text-stone-700"></i>
+          <h3 class="font-bold text-stone-900 text-sm sm:text-base">Sao Lưu & Phục Hồi Dữ Liệu Cục Bộ (IndexedDB)</h3>
+        </div>
+        <p class="text-xs text-stone-500">Toàn bộ dữ liệu tác phẩm và key được lưu trữ an toàn trong IndexedDB của trình duyệt. Bạn có thể sao lưu ra file JSON để đồng bộ sang thiết bị khác.</p>
+        <div class="flex flex-wrap items-center gap-3 pt-2">
+          <button id="btn-backup-json" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+            <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
+            Xuất Dữ Liệu Ra File JSON
+          </button>
+          <label class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer">
+            <i data-lucide="hard-drive-upload" class="w-4 h-4"></i>
+            <span>Nhập Dữ Liệu Từ JSON</span>
+            <input type="file" id="input-restore-json" accept=".json" class="hidden" />
+          </label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: MANUAL CHAPTER EDITOR & PREVIEW -->
+  <div id="modal-chapter-editor" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-stone-200 overflow-hidden">
+      <div class="p-4 sm:p-5 border-b border-stone-200 flex items-center justify-between bg-stone-50">
+        <div>
+          <h3 id="modal-chapter-title" class="font-bold text-stone-900 text-base">Chỉnh Sửa Chương</h3>
+          <p id="modal-chapter-stats" class="text-xs text-stone-500">0 từ • Cập nhật gần nhất</p>
+        </div>
+        <button id="btn-close-modal" class="p-2 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-200/60 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-6 flex-1 overflow-y-auto space-y-4">
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-stone-700">Tiêu đề chương:</label>
+          <input type="text" id="modal-input-title" class="w-full text-xs sm:text-sm p-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-800 font-medium" />
+        </div>
+
+        <div class="space-y-1 flex-1 flex flex-col">
+          <label class="text-xs font-semibold text-stone-700">Nội dung văn bản sách (Đoạn văn cách nhau 1 dòng trống, thuần túy sách in):</label>
+          <textarea id="modal-textarea-content" rows="14" class="w-full text-sm font-reading p-3 bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-800 leading-relaxed"></textarea>
+        </div>
+
+        <!-- Sync State Inspector -->
+        <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-200 text-xs space-y-1">
+          <span class="font-bold text-amber-900">Trạng Thái Đồng Bộ Ngữ Cảnh (Sync State sang chương sau):</span>
+          <p id="modal-sync-summary" class="text-stone-600 text-[11px] italic">Tóm tắt biến cố: Chưa có</p>
+          <p id="modal-sync-ending" class="text-stone-600 text-[11px] italic">Hai câu kết: Chưa có</p>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-stone-200 bg-stone-50 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button id="btn-modal-export-docx" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            Xuất Lẻ .DOCX
+          </button>
+          <button id="btn-modal-export-epub" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            Xuất Lẻ .EPUB
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-modal-cancel" class="px-4 py-2 text-stone-600 hover:bg-stone-200/60 rounded-xl text-xs font-medium transition">Đóng</button>
+          <button id="btn-modal-save" class="px-5 py-2 bg-amber-900 hover:bg-amber-950 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            Lưu Thay Đổi
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOC Drawer for Reader -->
+  <div id="drawer-toc" class="fixed inset-y-0 left-0 z-40 w-72 bg-white shadow-2xl border-r border-stone-200 p-5 transform -translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+      <h4 class="font-bold text-stone-900 text-sm flex items-center gap-2">
+        <i data-lucide="list" class="w-4 h-4 text-amber-700"></i>
+        Mục Lục Tác Phẩm
+      </h4>
+      <button id="btn-close-toc" class="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <div id="drawer-toc-list" class="flex-1 overflow-y-auto py-3 space-y-1">
+      <!-- Chapter jump links -->
+    </div>
+  </div>
+
+  <!-- MAIN JAVASCRIPT ES MODULE LOGIC -->
+  <script type="module">
+    // ======================================================================
+    // 1. INDEXEDDB SETUP VIA DEXIE.JS
+    // ======================================================================
+    const db = new Dexie('BookStudioDB');
+    db.version(1).stores({
+      keys: '++id, key, status, failCount, unlockAt, successCount',
+      projects: '++id, title, author, genre, plotSummary, totalChapters, wordsPerChapter, extractedStyle, styleGuideline, pov, coverPrompt, coverImageBase64, currentChapterIndex, isAutoPilotRunning, createdAt',
+      chapters: '++id, projectId, chapterNum, title, mainEvents, endingGoal, content, summary, endingSentence, status, wordCount, updatedAt'
+    });
+
+    // ======================================================================
+    // 2. GENRE PRESETS DEFINITIONS (10 PRESETS IN 2 DISTINCT GROUPS)
+    // ======================================================================
+    const GENRE_PRESETS = {
+      detective: {
+        name: 'Trinh thám / Giật gân',
+        group: 1,
+        style: 'Văn phong lạnh lùng, sắc bén, nhịp dồn dập. Chú trọng chi tiết giác quan hiện trường, đối thoại ngắn gọn mang tính đấu trí, giấu kín động cơ.',
+        addressing: 'Tôi - anh/chị, điều tra viên - nghi phạm, đồng nghiệp.'
+      },
+      horror: {
+        name: 'Kinh dị / Tâm linh',
+        group: 1,
+        style: 'Văn phong u ám, chậm rãi, tạo cảm giác bất an tích tụ. Khai thác ảo giác và nỗi sợ tâm lý vô hình.',
+        addressing: 'Đời thường, mộc mạc: anh - em, mày - tao, chú - cháu.'
+      },
+      scifi: {
+        name: 'Khoa học viễn tưởng (Sci-Fi)',
+        group: 1,
+        style: 'Hiện đại, giàu tính logic kỹ thuật, góc nhìn phản địa đàng hoặc tương lai công nghệ cao.',
+        addressing: 'Tôi - cậu, mã định danh, cấp bậc chỉ huy.'
+      },
+      urban: {
+        name: 'Đô thị / Đời sống / Hiện thực',
+        group: 1,
+        style: 'Giọng văn gần gũi, chân thực, phản ánh mâu thuẫn xã hội và gánh nặng cơm áo gạo tiền thường nhật.',
+        addressing: 'Tôi - anh, ông - tôi, chú - cháu, mày - tao.'
+      },
+      fantasy: {
+        name: 'Kỳ ảo phương Tây (High Fantasy)',
+        group: 1,
+        style: 'Văn phong sử thi, trang trọng, đậm chất thần thoại cổ điển; thế giới quan rộng lớn.',
+        addressing: 'Ngài - tôi, bệ hạ, điện hạ, huynh đệ chiến hữu, ngươi - ta.'
+      },
+      romance: {
+        name: 'Lãng mạn / Ngôn tình',
+        group: 1,
+        style: 'Mượt mà, tinh tế, giàu cảm xúc, chú trọng độc thoại nội tâm và tương tác vi mô.',
+        addressing: 'Anh - em, tôi - cô/cậu.'
+      },
+      selfhelp: {
+        name: 'Phát triển bản thân (Self-Help)',
+        group: 1,
+        style: 'Truyền cảm hứng, gãy gọn, định hướng hành động; kết cấu: Luận điểm -> Câu chuyện thực tế -> Bài học -> Thực hành.',
+        addressing: 'Tôi - bạn.'
+      },
+      // GROUP 2: STRICT FACTUAL / ZERO HALLUCINATION
+      history: {
+        name: 'Lịch sử',
+        group: 2,
+        style: 'Văn phong trang nghiêm, trung lập, tái hiện dòng thời gian theo sử liệu. Mọi mốc thời gian, niên hiệu, địa danh, tên nhân vật, sự kiện phải chính xác 100% theo chính sử; cấm hư cấu chi tiết giật gân.',
+        addressing: 'Ngôi thứ ba khách quan.'
+      },
+      science: {
+        name: 'Khoa học',
+        group: 2,
+        style: 'Văn phong logic, sáng sủa, học thuật; định lý, công thức, đơn vị đo lường và nguyên lý thực nghiệm phải đúng 100%. Phân định rõ giữa quy luật đã kiểm chứng và giả thuyết.',
+        addressing: 'Khách quan khoa học.'
+      },
+      medicine: {
+        name: 'Y học & Sức khỏe',
+        group: 2,
+        style: 'Thận trọng theo y học thực chứng; giải phẫu học, cơ chế bệnh học, tên thuốc, hoạt chất, khuyến cáo sức khỏe phải chuẩn mực theo tài liệu y khoa chính thống.',
+        addressing: 'Chuyên gia/Bác sĩ - người đọc hoặc ngôi thứ ba.'
+      }
+    };
+
+    const FACTUAL_STRICT_PROMPT = `
+[RÀNG BUỘC SỰ THẬT TUYỆT ĐỐI - ZERO HALLUCINATION]
+Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đối không được bịa đặt dữ liệu, không sáng tác sự kiện sai lệch lịch sử/khoa học/y tế. Mọi mốc niên đại, định lý, hoạt chất, thuật ngữ phải đúng mực tuyệt đối theo tài liệu chính thống.`;
+
+    // ======================================================================
+    // 3. APPLICATION STATE
+    // ======================================================================
+    let currentProject = null;
+    let chaptersList = [];
+    let isAutoPilotActive = false;
+    let extractedStyleDNA = '';
+    let sampleFileRawText = '';
+    let currentEditingChapter = null;
+    let readerCurrentChapterIndex = 0;
+    let readerTheme = 'light'; // light, sepia, dark
+    let readerFontSize = 18;
+    let readerLineHeight = 1.8;
+
+    // ======================================================================
+    // 4. KEY ROTATION & PROGRESSIVE COOLDOWN POOL
+    // ======================================================================
+    async function getActiveKey() {
+      const now = Date.now();
+      // Update any expired cooldowns
+      const allKeys = await db.keys.toArray();
+      for (const k of allKeys) {
+        if (k.status === 'cooldown' && now >= k.unlockAt) {
+          await db.keys.update(k.id, { status: 'active' });
+        }
+      }
+
+      const activeKeys = await db.keys.where('status').equals('active').toArray();
+      if (activeKeys.length > 0) {
+        // Pick random key from active pool
+        const randomIndex = Math.floor(Math.random() * activeKeys.length);
+        return activeKeys[randomIndex];
+      }
+
+      // Check nearest cooldown key
+      const cooldownKeys = await db.keys.where('status').equals('cooldown').toArray();
+      if (cooldownKeys.length > 0) {
+        cooldownKeys.sort((a, b) => a.unlockAt - b.unlockAt);
+        const nearest = cooldownKeys[0];
+        const waitMs = Math.max(1000, nearest.unlockAt - now);
+        updateKeyPoolBanner(nearest.unlockAt);
+        throw { isCooldown: true, waitMs, unlockAt: nearest.unlockAt };
+      }
+
+      throw new Error('Chưa có API Key nào trong hệ thống! Vui lòng nhập ít nhất 1 Gemini API Key tại phần Cài đặt.');
+    }
+
+    async function handleKeyFailure(keyObj, status) {
+      if (!keyObj || !keyObj.id) return;
+      const now = Date.now();
+      const currentFail = (keyObj.failCount || 0) + 1;
+      let unlockAt = now;
+      let newStatus = 'cooldown';
+
+      if (status === 429) {
+        if (currentFail === 1) {
+          unlockAt = now + 2 * 60 * 1000; // 2 minutes
+        } else if (currentFail === 2) {
+          unlockAt = now + 10 * 60 * 1000; // 10 minutes
+        } else {
+          unlockAt = now + 60 * 60 * 1000; // 60 minutes or banned
+          newStatus = 'banned';
+        }
+      } else {
+        unlockAt = now + 1 * 60 * 1000; // 1 minute generic penalty
+      }
+
+      await db.keys.update(keyObj.id, {
+        status: newStatus,
+        failCount: currentFail,
+        unlockAt: unlockAt,
+        successCount: 0
+      });
+
+      renderKeysList();
+    }
+
+    async function handleKeySuccess(keyObj) {
+      if (!keyObj || !keyObj.id) return;
+      const newSuccess = (keyObj.successCount || 0) + 1;
+      const updates = { successCount: newSuccess };
+      if (newSuccess >= 3) {
+        updates.failCount = 0;
+      }
+      await db.keys.update(keyObj.id, updates);
+      renderKeysList();
+    }
+
+    // Call Gemini API with automatic key rotation and auto-retry on 429
+    async function callGeminiApi(prompt, systemInstruction = '', maxRetries = 5) {
+      let attempts = 0;
+      while (attempts < maxRetries) {
+        attempts++;
+        let keyObj;
+        try {
+          keyObj = await getActiveKey();
+        } catch (err) {
+          if (err.isCooldown) {
+            console.warn(`All keys in cooldown. Waiting ${Math.ceil(err.waitMs / 1000)}s...`);
+            await new Promise(r => setTimeout(r, Math.min(err.waitMs, 5000)));
+            continue;
+          }
+          throw err;
+        }
+
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyObj.key}`;
+        const payload = {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95
+          }
+        };
+
+        if (systemInstruction) {
+          payload.systemInstruction = {
+            parts: [{ text: systemInstruction }]
+          };
+        }
+
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.status === 429) {
+            console.warn(`Key ${keyObj.key.slice(0, 8)}... rate limited (429). Rotating key...`);
+            await handleKeyFailure(keyObj, 429);
+            continue; // Immediately retry with next active key
+          }
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`Gemini API Error (${res.status}): ${errData.error?.message || res.statusText}`);
+          }
+
+          const data = await res.json();
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          await handleKeySuccess(keyObj);
+          return rawText;
+        } catch (error) {
+          console.error(`Attempt ${attempts} failed:`, error);
+          if (attempts >= maxRetries) throw error;
+        }
+      }
+      throw new Error('Đã thử lại qua tất cả các API key nhưng không thành công do giới hạn hạn mức.');
+    }
+
+    // ======================================================================
+    // 5. STRICT FORMATTING ENGINE (NO MARKDOWN, BOOK-PAGES STANDARD)
+    // ======================================================================
+    function cleanBookText(text) {
+      if (!text) return '';
+      let clean = text;
+
+      // 1. Remove Markdown Bold & Italic (*, **, _, __)
+      clean = clean.replace(/\*\*(.*?)\*\*/g, '$1');
+      clean = clean.replace(/\*(.*?)\*/g, '$1');
+      clean = clean.replace(/__([^_]+)__/g, '$1');
+      clean = clean.replace(/_([^_]+)_/g, '$1');
+
+      // 2. Remove Markdown Headings (#, ##, ###, etc.)
+      clean = clean.replace(/^#{1,6}\s+/gm, '');
+
+      // 3. Remove Markdown bullet lists (- , * )
+      clean = clean.replace(/^[\*\-]\s+/gm, '');
+
+      // 4. Remove AI conversational prefixes / chatter
+      clean = clean.replace(/^(Dưới đây là|Đây là|Sau đây là|Chương\s+\d+:\s*|Hết chương).*$/gm, '');
+
+      // 5. Clean extra blank lines, keep standard \n\n paragraph separation
+      clean = clean.replace(/\r\n/g, '\n');
+      clean = clean.replace(/\n{3,}/g, '\n\n');
+
+      // 6. Dialogue dashes normalization (em-dash —)
+      clean = clean.replace(/^[-–]\s*/gm, '— ');
+
+      return clean.trim();
+    }
+
+    // ======================================================================
+    // 6. BOOK COVER ART GENERATOR (CANVAS ARTWORK & IMAGEN INTEGRATION)
+    // ======================================================================
+    async function generateBookCover(title, author, genreName, promptEn) {
+      // Try Imagen API first if supported
+      try {
+        const keyObj = await getActiveKey();
+        const imagenEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${keyObj.key}`;
+        const res = await fetch(imagenEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instances: [{ prompt: `${promptEn}, book cover illustration, no typography, professional editorial art, masterpiece` }],
+            parameters: { sampleCount: 1, aspectRatio: '3:4' }
+          })
+        });
+        if (res.ok) {
+          const imgData = await res.json();
+          const base64 = imgData.predictions?.[0]?.bytesBase64Encoded;
+          if (base64) {
+            return `data:image/jpeg;base64,${base64}`;
+          }
+        }
+      } catch (err) {
+        console.warn('Imagen not directly accessible, generating high-res artistic SVG book cover canvas...', err);
+      }
+
+      // High-Craft Client-Side Book Cover Render via Canvas
+      return renderArtisticCoverCanvas(title, author, genreName);
+    }
+
+    function renderArtisticCoverCanvas(title, author, genreName) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 1200;
+      const ctx = canvas.getContext('2d');
+
+      // Gradient background based on genre
+      const grad = ctx.createLinearGradient(0, 0, 800, 1200);
+      grad.addColorStop(0, '#1c1917');
+      grad.addColorStop(0.5, '#292524');
+      grad.addColorStop(1, '#0c0a09');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 800, 1200);
+
+      // Gold ornate border
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(40, 40, 720, 1120);
+
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(48, 48, 704, 1104);
+
+      // Corner ornaments
+      function drawCorner(x, y) {
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      drawCorner(40, 40);
+      drawCorner(760, 40);
+      drawCorner(40, 1160);
+      drawCorner(760, 1160);
+
+      // Genre Badge
+      ctx.fillStyle = '#b45309';
+      ctx.font = '600 24px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.letterSpacing = '4px';
+      ctx.fillText(genreName.toUpperCase(), 400, 260);
+
+      // Title (Multi-line wrap)
+      ctx.fillStyle = '#fbf0d9';
+      ctx.font = '700 56px "Literata", serif';
+      ctx.textAlign = 'center';
+      
+      const words = title.split(' ');
+      let line = '';
+      let y = 420;
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > 600 && n > 0) {
+          ctx.fillText(line.trim(), 400, y);
+          line = words[n] + ' ';
+          y += 75;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line.trim(), 400, y);
+
+      // Central divider
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(300, y + 60);
+      ctx.lineTo(500, y + 60);
+      ctx.stroke();
+
+      // Author name
+      ctx.fillStyle = '#e7e5e4';
+      ctx.font = '500 28px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(author, 400, 960);
+
+      // Publisher watermark
+      ctx.fillStyle = '#78716c';
+      ctx.font = '400 18px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('XUẤT BẢN KỸ THUẬT SỐ • AI STUDIO', 400, 1080);
+
+      return canvas.toDataURL('image/png');
+    }
+
+    // ======================================================================
+    // 7. SAMPLE FILE PARSER (.TXT, .DOCX, .EPUB)
+    // ======================================================================
+    async function parseSampleFile(file) {
+      const name = file.name.toLowerCase();
+      let text = '';
+
+      if (name.endsWith('.txt')) {
+        text = await file.text();
+      } else if (name.endsWith('.docx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        if (window.mammoth) {
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          text = result.value;
+        } else {
+          throw new Error('Thư viện Mammoth.js chưa sẵn sàng.');
+        }
+      } else if (name.endsWith('.epub')) {
+        const arrayBuffer = await file.arrayBuffer();
+        if (window.JSZip) {
+          const zip = await JSZip.loadAsync(arrayBuffer);
+          const htmlFiles = [];
+          zip.forEach((relativePath, zipEntry) => {
+            if (relativePath.match(/\.(html|xhtml|htm)$/i)) {
+              htmlFiles.push(zipEntry);
+            }
+          });
+          for (const entry of htmlFiles.slice(0, 5)) {
+            const content = await entry.async('string');
+            const doc = new DOMParser().parseFromString(content, 'text/html');
+            text += ' ' + (doc.body?.textContent || '');
+          }
+        } else {
+          throw new Error('Thư viện JSZip chưa sẵn sàng.');
+        }
+      } else {
+        throw new Error('Định dạng không hỗ trợ. Vui lòng chọn .txt, .docx, hoặc .epub');
+      }
+
+      return text.trim();
+    }
+
+    // Extract Style DNA (<100 words)
+    async function extractStyleDna(sampleText) {
+      const words = sampleText.split(/\s+/).slice(0, 3000).join(' ');
+      const prompt = `
+[VAI TRÒ] Bạn là chuyên gia giám định phong cách văn bản học thuật và văn học.
+[NHIỆM VỤ] Hãy đọc trích đoạn sau và bóc tách "ADN phong cách" của tác giả để hướng dẫn viết phỏng theo khoảng 50-60% đặc trưng này (không sao chép nội dung):
+${words}
+[YÊU CẦU ĐẦU RA]
+Viết đoạn văn ngắn dưới 100 từ mô tả: Nhịp điệu câu văn, cách dùng từ ngữ đặc trưng, tỷ lệ miêu tả/đối thoại.`;
+
+      const dna = await callGeminiApi(prompt);
+      return dna.trim();
+    }
+
+    // ======================================================================
+    // 8. MASTER BIBLE, OUTLINE & COVER PROMPT GENERATION
+    // ======================================================================
+    async function generateMasterBible(formData) {
+      const genreKey = formData.genre;
+      const genreInfo = GENRE_PRESETS[genreKey] || GENRE_PRESETS.detective;
+      const isGroup2 = genreInfo.group === 2;
+
+      const prompt = `
+[VAI TRÒ] Tổng biên tập và Nhà quy hoạch xuất bản chuyên nghiệp.
+[THÔNG TIN DỰ ÁN]
+- Tên sách: ${formData.title}
+- Tác giả: ${formData.author}
+- Thể loại: ${genreInfo.name}
+- Cốt truyện/Ý tưởng: ${formData.plotSummary}
+- Tổng số chương: ${formData.totalChapters}
+- Phong cách thể loại: ${genreInfo.style}
+- ADN văn phong từ file mẫu: ${formData.extractedStyle || 'Không có, tuân thủ phong cách chuẩn thể loại.'}
+${isGroup2 ? FACTUAL_STRICT_PROMPT : ''}
+
+[YÊU CẦU ĐẦU RA JSON HỢP LỆ, KHÔNG DÙNG KÝ HIỆU MARKDOWN TRONG VALUE, CHỈ TRẢ VỀ JSON THUẦN]
+{
+  "style_guideline": "Bản quy chuẩn văn phong tổng thể",
+  "pov": "Ngôi kể (Ngôi thứ nhất hoặc thứ ba)",
+  "addressing_rules": [
+    {"char_a": "Tên A", "char_b": "Tên B", "a_calls_b": "anh", "b_calls_a": "em", "relation": "đồng nghiệp"}
+  ],
+  "cover_prompt_en": "A highly detailed book cover illustration description in English depicting lighting, atmosphere, and key symbols, without text or typography",
+  "outline": [
+    {"chapter_num": 1, "title": "Tên chương", "main_events": "Sự kiện cốt lõi", "ending_goal": "Tình trạng kết thúc"}
+  ]
+}`;
+
+      const raw = await callGeminiApi(prompt);
+      // Clean possible JSON backticks
+      const cleanJson = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanJson);
+      } catch (e) {
+        // Simple fallback parser
+        const match = cleanJson.match(/\{[\s\S]*\}/);
+        if (match) {
+          parsed = JSON.parse(match[0]);
+        } else {
+          throw new Error('Không thể phân tích cấu trúc JSON từ Gemini. Vui lòng thử lại.');
+        }
+      }
+
+      return parsed;
+    }
+
+    // ======================================================================
+    // 9. MICRO-WRITING LOOP FOR EACH CHAPTER & STATE SYNC
+    // ======================================================================
+    async function writeSingleChapter(project, chapter, prevSummary = '', prevEnding = '') {
+      const genreInfo = GENRE_PRESETS[project.genre] || GENRE_PRESETS.detective;
+      const isGroup2 = genreInfo.group === 2;
+
+      let addressingText = '';
+      if (Array.isArray(project.addressingRules)) {
+        addressingText = project.addressingRules.map(r => `- ${r.char_a} gọi ${r.char_b} là "${r.a_calls_b}", ${r.char_b} gọi lại là "${r.b_calls_a}" (${r.relation})`).join('\n');
+      }
+
+      const prompt = `
+[QUY TẮC ĐỊNH DẠNG BẮT BUỘC]
+1. TUYỆT ĐỐI CẤM ký hiệu Markdown: Không dùng *, **, #, ##, ###, _, -.
+2. KHÔNG viết lời chào mở đầu, lời bình luận hay thông báo kết thúc chương ("Dưới đây là...", "Hết chương...").
+3. Trình bày thuần túy như trang sách in thương mại: Các đoạn văn cách nhau 1 dòng trống. Lời thoại bắt đầu bằng gạch ngang dài (—) hoặc đặt trong ngoặc kép.
+
+[VĂN PHONG VÀ DANH XƯNG BẤT BIẾN]
+- Văn phong: ${project.styleGuideline}
+- Ngôi kể: ${project.pov}
+- Bảng quy tắc danh xưng bắt buộc tuân thủ 100%:
+${addressingText || 'Tuân thủ danh xưng chuẩn của thể loại'}
+${isGroup2 ? FACTUAL_STRICT_PROMPT : ''}
+
+[NGỮ CẢNH CHƯƠNG TRƯỚC]
+- Tóm tắt diễn biến trước: ${prevSummary || 'Đây là chương mở đầu tác phẩm.'}
+- Câu kết thúc của chương trước: "${prevEnding || ''}"
+
+[NHIỆM VỤ VIẾT CHƯƠNG ${chapter.chapterNum}: ${chapter.title}]
+- Diễn biến chính cần diễn tả: ${chapter.mainEvents}
+- Mục tiêu kết thúc chương: ${chapter.endingGoal}
+- Độ dài mục tiêu: Khoảng ${project.wordsPerChapter || 1200} từ.
+Bắt đầu viết trực tiếp câu chữ đầu tiên của tác phẩm, nối tiếp hoàn hảo và mượt mà vào câu kết của chương trước.`;
+
+      const rawChapter = await callGeminiApi(prompt);
+      const cleanContent = cleanBookText(rawChapter);
+
+      // STEP 5.5: STATE SYNC IMMEDIATELY AFTER WRITING
+      const syncPrompt = `
+Đọc nội dung chương truyện dưới đây và trích xuất đúng 2 thông tin (text thuần, không dùng Markdown):
+1. Tóm tắt 3 câu ngắn gọn về biến cố vừa xảy ra.
+2. Trích nguyên văn 2 câu văn cuối cùng của chương này.
+[NỘI DUNG]
+${cleanContent.slice(-4000)}`;
+
+      const syncResult = await callGeminiApi(syncPrompt);
+      const lines = syncResult.split('\n').filter(l => l.trim().length > 0);
+      const summary = lines.slice(0, 3).join(' ');
+      const endingSentence = lines.slice(-2).join(' ');
+
+      const wordCount = cleanContent.trim().split(/\s+/).length;
+
+      // Update chapter in DB
+      await db.chapters.update(chapter.id, {
+        content: cleanContent,
+        summary: cleanBookText(summary),
+        endingSentence: cleanBookText(endingSentence),
+        wordCount: wordCount,
+        status: 'completed',
+        updatedAt: Date.now()
+      });
+
+      return { cleanContent, summary, endingSentence, wordCount };
+    }
+
+    // ======================================================================
+    // 10. EXPORT ENGINES (DOCX & EPUB BUILDERS)
+    // ======================================================================
+    async function exportFullBookDocx(project, chapters) {
+      if (!window.docx) {
+        alert('Thư viện docx.js chưa tải xong. Vui lòng thử lại sau giây lát.');
+        return;
+      }
+
+      const { Document, Paragraph, TextRun, HeadingLevel, PageBreak, ImageRun, AlignmentType } = window.docx;
+      const docChildren = [];
+
+      // Page 1: Cover Image & Title Page
+      if (project.coverImageBase64) {
+        try {
+          const base64Data = project.coverImageBase64.split(',')[1];
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+
+          docChildren.push(
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new ImageRun({
+                  data: byteArray,
+                  transformation: { width: 400, height: 600 }
+                })
+              ]
+            })
+          );
+        } catch (e) {
+          console.warn('Cover image embed failed, continuing text docx...', e);
+        }
+      }
+
+      docChildren.push(
+        new Paragraph({
+          text: project.title,
+          heading: HeadingLevel.TITLE,
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 400, after: 200 }
+        }),
+        new Paragraph({
+          text: `Tác giả: ${project.author}`,
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 600 }
+        }),
+        new Paragraph({
+          children: [new PageBreak()]
+        })
+      );
+
+      // Chapters content with page breaks
+      for (let i = 0; i < chapters.length; i++) {
+        const ch = chapters[i];
+        docChildren.push(
+          new Paragraph({
+            text: `Chương ${ch.chapterNum}: ${ch.title}`,
+            heading: HeadingLevel.HEADING_1,
+            spacing: { before: 400, after: 300 }
+          })
+        );
+
+        const paras = (ch.content || '').split('\n\n');
+        for (const p of paras) {
+          if (p.trim()) {
+            docChildren.push(
+              new Paragraph({
+                text: p.trim(),
+                spacing: { after: 200, line: 360 },
+                indent: { firstLine: 400 }
+              })
+            );
+          }
+        }
+
+        if (i < chapters.length - 1) {
+          docChildren.push(
+            new Paragraph({
+              children: [new PageBreak()]
+            })
+          );
+        }
+      }
+
+      const doc = new Document({
+        sections: [{ properties: {}, children: docChildren }]
+      });
+
+      const blob = await docx.Packer.toBlob(doc);
+      saveAs(blob, `${project.title || 'TacPham'}.docx`);
+    }
+
+    async function exportFullBookEpub(project, chapters) {
+      if (!window.JSZip || !window.saveAs) {
+        alert('Thư viện đóng gói EPUB chưa sẵn sàng.');
+        return;
+      }
+
+      const zip = new JSZip();
+
+      // 1. mimetype (MUST be uncompressed and first)
+      zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+
+      // 2. META-INF/container.xml
+      const containerXml = `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`;
+      zip.folder('META-INF').file('container.xml', containerXml);
+
+      const oebps = zip.folder('OEBPS');
+
+      // 3. Stylesheet
+      const css = `
+body { font-family: "Literata", "Lora", serif; line-height: 1.6; margin: 5%; color: #111; }
+h1, h2, h3 { text-align: center; font-weight: bold; margin-bottom: 1.5em; }
+p { text-indent: 1.5em; margin-bottom: 1em; text-align: justify; }
+p.no-indent { text-indent: 0; }
+.cover-img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+`;
+      oebps.file('stylesheet.css', css);
+
+      // Handle Cover Image
+      let hasCover = false;
+      if (project.coverImageBase64) {
+        try {
+          const base64Data = project.coverImageBase64.split(',')[1];
+          oebps.file('cover.png', base64Data, { base64: true });
+          hasCover = true;
+
+          const coverXhtml = `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>Bìa Sách</title><link rel="stylesheet" type="text/css" href="stylesheet.css"/></head>
+<body style="text-align:center; padding:0; margin:0;">
+  <img src="cover.png" alt="Bìa sách" class="cover-img"/>
+</body>
+</html>`;
+          oebps.file('cover.xhtml', coverXhtml);
+        } catch (e) {
+          console.warn('Cover image save failed in epub', e);
+        }
+      }
+
+      // Individual Chapters XHTML
+      chapters.forEach((ch) => {
+        const paragraphs = (ch.content || '').split('\n\n')
+          .map(p => `<p>${escapeHtml(p.trim())}</p>`)
+          .join('\n');
+
+        const xhtml = `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Chương ${ch.chapterNum}: ${escapeHtml(ch.title)}</title>
+  <link rel="stylesheet" type="text/css" href="stylesheet.css"/>
+</head>
+<body>
+  <h2>Chương ${ch.chapterNum}: ${escapeHtml(ch.title)}</h2>
+  ${paragraphs}
+</body>
+</html>`;
+        oebps.file(`chapter-${ch.chapterNum}.xhtml`, xhtml);
+      });
+
+      // 4. content.opf
+      let manifestItems = `
+    <item id="css" href="stylesheet.css" media-type="text/css"/>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>`;
+
+      if (hasCover) {
+        manifestItems += `
+    <item id="cover-img" href="cover.png" media-type="image/png" properties="cover-image"/>
+    <item id="cover-page" href="cover.xhtml" media-type="application/xhtml+xml"/>`;
+      }
+
+      chapters.forEach(ch => {
+        manifestItems += `
+    <item id="ch-${ch.chapterNum}" href="chapter-${ch.chapterNum}.xhtml" media-type="application/xhtml+xml"/>`;
+      });
+
+      let spineItems = hasCover ? `<itemref idref="cover-page"/>\n` : '';
+      chapters.forEach(ch => {
+        spineItems += `    <itemref idref="ch-${ch.chapterNum}"/>\n`;
+      });
+
+      const contentOpf = `<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>${escapeHtml(project.title)}</dc:title>
+    <dc:creator>${escapeHtml(project.author)}</dc:creator>
+    <dc:language>vi</dc:language>
+    <dc:identifier id="BookID">urn:uuid:${Date.now()}</dc:identifier>
+    <meta property="dcterms:modified">${new Date().toISOString()}</meta>
+  </metadata>
+  <manifest>${manifestItems}
+  </manifest>
+  <spine toc="ncx">
+${spineItems}
+  </spine>
+</package>`;
+      oebps.file('content.opf', contentOpf);
+
+      // 5. toc.ncx
+      let navPoints = '';
+      chapters.forEach((ch, idx) => {
+        navPoints += `
+    <navPoint id="navPoint-${ch.chapterNum}" playOrder="${idx + 1}">
+      <navLabel><text>Chương ${ch.chapterNum}: ${escapeHtml(ch.title)}</text></navLabel>
+      <content src="chapter-${ch.chapterNum}.xhtml"/>
+    </navPoint>`;
+      });
+
+      const tocNcx = `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head>
+    <meta name="dtb:uid" content="urn:uuid:${Date.now()}"/>
+    <meta name="dtb:depth" content="1"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle><text>${escapeHtml(project.title)}</text></docTitle>
+  <navMap>${navPoints}
+  </navMap>
+</ncx>`;
+      oebps.file('toc.ncx', tocNcx);
+
+      // Build and save zip
+      const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' });
+      saveAs(blob, `${project.title || 'TacPham'}.epub`);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // ======================================================================
+    // 11. UI RENDERING & EVENT BINDINGS
+    // ======================================================================
+    function switchView(viewName) {
+      ['settings', 'workspace', 'reader', 'export'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        const btn = document.getElementById(`nav-btn-${v}`);
+        if (v === viewName) {
+          el?.classList.remove('hidden');
+          btn?.classList.add('bg-stone-100', 'text-stone-900');
+          btn?.classList.remove('text-stone-600');
+        } else {
+          el?.classList.add('hidden');
+          btn?.classList.remove('bg-stone-100', 'text-stone-900');
+          btn?.classList.add('text-stone-600');
+        }
+      });
+      lucide.createIcons();
+    }
+
+    function updateKeyPoolBanner(unlockAt) {
+      const banner = document.getElementById('key-pool-banner');
+      const text = document.getElementById('key-pool-banner-text');
+      if (!banner || !text) return;
+
+      if (!unlockAt || Date.now() >= unlockAt) {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      banner.classList.remove('hidden');
+      const interval = setInterval(() => {
+        const remain = Math.max(0, Math.floor((unlockAt - Date.now()) / 1000));
+        const mins = String(Math.floor(remain / 60)).padStart(2, '0');
+        const secs = String(remain % 60).padStart(2, '0');
+        text.innerText = `Toàn bộ API Key đang bị phạt tạm thời. Đang chờ mở khóa key tiếp theo trong ${mins}:${secs}...`;
+
+        if (remain <= 0) {
+          clearInterval(interval);
+          banner.classList.add('hidden');
+          renderKeysList();
+        }
+      }, 1000);
+    }
+
+    async function renderKeysList() {
+      const container = document.getElementById('keys-list-container');
+      const countBadge = document.getElementById('keys-count-badge');
+      if (!container) return;
+
+      const keys = await db.keys.toArray();
+      countBadge.innerText = `${keys.length} keys`;
+
+      if (keys.length === 0) {
+        container.innerHTML = `<div class="p-3 text-center text-stone-400 bg-stone-50 rounded-lg text-xs">Chưa có API key nào. Vui lòng thêm key ở trên.</div>`;
+        return;
+      }
+
+      const now = Date.now();
+      container.innerHTML = keys.map(k => {
+        let statusBadge = '';
+        const isCooldown = k.status === 'cooldown' && now < k.unlockAt;
+        const isBanned = k.status === 'banned';
+
+        if (isCooldown) {
+          const remain = Math.ceil((k.unlockAt - now) / 1000);
+          statusBadge = `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono text-[10px]">Phạt ${remain}s</span>`;
+        } else if (isBanned) {
+          statusBadge = `<span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px]">Hết hạn (Banned)</span>`;
+        } else {
+          statusBadge = `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px]">Hoạt động</span>`;
+        }
+
+        const masked = k.key.slice(0, 7) + '...' + k.key.slice(-4);
+
+        return `
+          <div class="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-200">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-[11px] text-stone-800">${masked}</span>
+              <span class="text-[10px] text-stone-400">Lỗi: ${k.failCount || 0}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              ${statusBadge}
+              <button onclick="window.deleteKey(${k.id})" class="text-stone-400 hover:text-red-600 p-1" title="Xóa key">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    window.deleteKey = async function(id) {
+      await db.keys.delete(id);
+      renderKeysList();
+    };
+
+    async function renderWorkspace() {
+      if (!currentProject) return;
+
+      document.getElementById('header-book-title').innerText = currentProject.title;
+      document.getElementById('workspace-title').innerText = currentProject.title;
+      document.getElementById('workspace-author-genre').innerText = `${currentProject.author} • ${GENRE_PRESETS[currentProject.genre]?.name || 'Tiểu thuyết'}`;
+
+      // Master Bible
+      document.getElementById('bible-pov').innerText = currentProject.pov || 'Ngôi thứ ba';
+      document.getElementById('bible-style').innerText = currentProject.styleGuideline || 'Chưa thiết lập';
+      
+      const addrContainer = document.getElementById('bible-addressing-container');
+      if (Array.isArray(currentProject.addressingRules) && currentProject.addressingRules.length > 0) {
+        addrContainer.innerHTML = currentProject.addressingRules.map(r => `
+          <div class="p-1.5 bg-stone-50 rounded border border-stone-100 text-[11px]">
+            <span class="font-medium text-stone-800">${r.char_a} &lt;-&gt; ${r.char_b}:</span>
+            <span class="text-stone-600">"${r.a_calls_b}" / "${r.b_calls_a}" (${r.relation})</span>
+          </div>
+        `).join('');
+      } else {
+        addrContainer.innerHTML = '<p class="text-stone-400 italic text-[11px]">Chưa có quy tắc danh xưng cụ thể</p>';
+      }
+
+      // Cover
+      const coverImg = document.getElementById('workspace-cover-img');
+      const coverPlaceholder = document.getElementById('workspace-cover-placeholder');
+      const coverPromptEl = document.getElementById('workspace-cover-prompt');
+      const thumb = document.getElementById('workspace-cover-thumbnail');
+
+      coverPromptEl.innerText = currentProject.coverPrompt || 'Mô tả ảnh bìa';
+
+      if (currentProject.coverImageBase64) {
+        coverImg.src = currentProject.coverImageBase64;
+        coverImg.classList.remove('hidden');
+        coverPlaceholder.classList.add('hidden');
+        thumb.innerHTML = `<img src="${currentProject.coverImageBase64}" class="w-full h-full object-cover" />`;
+      } else {
+        coverImg.classList.add('hidden');
+        coverPlaceholder.classList.remove('hidden');
+      }
+
+      // Chapters List
+      chaptersList = await db.chapters.where('projectId').equals(currentProject.id).sortBy('chapterNum');
+      const completedCount = chaptersList.filter(c => c.status === 'completed').length;
+      document.getElementById('chapters-stat-badge').innerText = `${completedCount} / ${chaptersList.length} chương hoàn thành`;
+
+      const listContainer = document.getElementById('chapters-list-container');
+      listContainer.innerHTML = chaptersList.map(ch => {
+        const isDone = ch.status === 'completed';
+        const statusClass = isDone ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-stone-50 text-stone-600 border-stone-200';
+        const statusLabel = isDone ? `Hoàn thành (${ch.wordCount || 0} từ)` : 'Chưa viết';
+
+        return `
+          <div class="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-amber-700/40 transition">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-stone-900 text-sm sm:text-base">Chương ${ch.chapterNum}: ${escapeHtml(ch.title)}</span>
+                <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${statusClass}">${statusLabel}</span>
+              </div>
+              <p class="text-xs text-stone-500 line-clamp-1">${escapeHtml(ch.mainEvents || 'Chưa có diễn biến')}</p>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="window.writeChapterDirect(${ch.id})" class="px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+                <i data-lucide="${isDone ? 'refresh-cw' : 'pen-tool'}" class="w-3.5 h-3.5"></i>
+                <span>${isDone ? 'Viết Lại' : 'Viết Chương'}</span>
+              </button>
+              <button onclick="window.openChapterEditor(${ch.id})" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+                <i data-lucide="file-edit" class="w-3.5 h-3.5"></i>
+                <span>Đọc & Sửa</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    window.writeChapterDirect = async function(chapterId) {
+      const chapter = await db.chapters.get(chapterId);
+      if (!chapter) return;
+
+      // Find previous chapter context
+      let prevSummary = '';
+      let prevEnding = '';
+      if (chapter.chapterNum > 1) {
+        const prev = await db.chapters.where({ projectId: currentProject.id, chapterNum: chapter.chapterNum - 1 }).first();
+        if (prev) {
+          prevSummary = prev.summary || '';
+          prevEnding = prev.endingSentence || '';
+        }
+      }
+
+      try {
+        await writeSingleChapter(currentProject, chapter, prevSummary, prevEnding);
+        await renderWorkspace();
+      } catch (err) {
+        alert('Lỗi viết chương: ' + err.message);
+      }
+    };
+
+    window.openChapterEditor = async function(chapterId) {
+      currentEditingChapter = await db.chapters.get(chapterId);
+      if (!currentEditingChapter) return;
+
+      document.getElementById('modal-chapter-title').innerText = `Chương ${currentEditingChapter.chapterNum}: ${currentEditingChapter.title}`;
+      document.getElementById('modal-chapter-stats').innerText = `${currentEditingChapter.wordCount || 0} từ • Trạng thái: ${currentEditingChapter.status}`;
+      document.getElementById('modal-input-title').value = currentEditingChapter.title || '';
+      document.getElementById('modal-textarea-content').value = currentEditingChapter.content || '';
+      document.getElementById('modal-sync-summary').innerText = `Tóm tắt biến cố: ${currentEditingChapter.summary || 'Chưa có'}`;
+      document.getElementById('modal-sync-ending').innerText = `Hai câu kết: "${currentEditingChapter.endingSentence || 'Chưa có'}"`;
+
+      document.getElementById('modal-chapter-editor').classList.remove('hidden');
+      lucide.createIcons();
+    };
+
+    // Save Chapter edits manually
+    document.getElementById('btn-modal-save')?.addEventListener('click', async () => {
+      if (!currentEditingChapter) return;
+      const title = document.getElementById('modal-input-title').value.trim();
+      const content = document.getElementById('modal-textarea-content').value.trim();
+      const wordCount = content ? content.split(/\s+/).length : 0;
+
+      await db.chapters.update(currentEditingChapter.id, {
+        title: title,
+        content: content,
+        wordCount: wordCount,
+        updatedAt: Date.now()
+      });
+
+      document.getElementById('modal-chapter-editor').classList.add('hidden');
+      await renderWorkspace();
+      if (readerCurrentChapterIndex === currentEditingChapter.chapterNum - 1) {
+        renderReader();
+      }
+    });
+
+    document.getElementById('btn-close-modal')?.addEventListener('click', () => {
+      document.getElementById('modal-chapter-editor').classList.add('hidden');
+    });
+    document.getElementById('btn-modal-cancel')?.addEventListener('click', () => {
+      document.getElementById('modal-chapter-editor').classList.add('hidden');
+    });
+
+    // Auto-Pilot Writing Loop
+    document.getElementById('btn-autopilot')?.addEventListener('click', async () => {
+      if (!currentProject) return;
+
+      if (isAutoPilotActive) {
+        isAutoPilotActive = false;
+        document.getElementById('btn-autopilot-text').innerText = 'Chạy Auto-Pilot Tự Động Viết';
+        document.getElementById('autopilot-progress-container').classList.add('hidden');
+        return;
+      }
+
+      isAutoPilotActive = true;
+      document.getElementById('btn-autopilot-text').innerText = 'Tạm Dừng Auto-Pilot';
+      document.getElementById('autopilot-progress-container').classList.remove('hidden');
+
+      const chapters = await db.chapters.where('projectId').equals(currentProject.id).sortBy('chapterNum');
+
+      for (let i = 0; i < chapters.length; i++) {
+        if (!isAutoPilotActive) break;
+        const ch = chapters[i];
+        if (ch.status === 'completed' && ch.content && ch.content.length > 200) {
+          continue; // Already done
+        }
+
+        const pct = Math.round((i / chapters.length) * 100);
+        document.getElementById('autopilot-percentage').innerText = `${pct}%`;
+        document.getElementById('autopilot-progress-bar').style.width = `${pct}%`;
+        document.getElementById('autopilot-status-message').innerText = `Đang viết Chương ${ch.chapterNum}: ${ch.title}...`;
+
+        let prevSummary = '';
+        let prevEnding = '';
+        if (ch.chapterNum > 1) {
+          const prev = await db.chapters.where({ projectId: currentProject.id, chapterNum: ch.chapterNum - 1 }).first();
+          if (prev) {
+            prevSummary = prev.summary || '';
+            prevEnding = prev.endingSentence || '';
+          }
+        }
+
+        try {
+          await writeSingleChapter(currentProject, ch, prevSummary, prevEnding);
+          await renderWorkspace();
+        } catch (err) {
+          console.error('Auto-pilot chapter error', err);
+          alert(`Auto-Pilot tạm dừng tại chương ${ch.chapterNum}: ${err.message}`);
+          break;
+        }
+      }
+
+      isAutoPilotActive = false;
+      document.getElementById('btn-autopilot-text').innerText = 'Chạy Auto-Pilot Tự Động Viết';
+      document.getElementById('autopilot-percentage').innerText = '100%';
+      document.getElementById('autopilot-progress-bar').style.width = '100%';
+      document.getElementById('autopilot-status-message').innerText = 'Hoàn thành tất cả các chương!';
+    });
+
+    // ======================================================================
+    // 12. E-READER PROFESSIONAL EXPERIENCE (KINDLE / APPLE BOOKS)
+    // ======================================================================
+    async function renderReader() {
+      if (!currentProject) return;
+      chaptersList = await db.chapters.where('projectId').equals(currentProject.id).sortBy('chapterNum');
+      if (chaptersList.length === 0) return;
+
+      if (readerCurrentChapterIndex < 0) readerCurrentChapterIndex = 0;
+      if (readerCurrentChapterIndex >= chaptersList.length) readerCurrentChapterIndex = chaptersList.length - 1;
+
+      const currentChapter = chaptersList[readerCurrentChapterIndex];
+
+      document.getElementById('reader-current-chapter-title').innerText = `Chương ${currentChapter.chapterNum}: ${currentChapter.title}`;
+      document.getElementById('reader-display-chapter-title').innerText = `Chương ${currentChapter.chapterNum}: ${currentChapter.title}`;
+      document.getElementById('reader-display-book-meta').innerText = `${currentProject.title} • ${currentProject.author}`;
+      document.getElementById('reader-progress-page-indicator').innerText = `Chương ${readerCurrentChapterIndex + 1} / ${chaptersList.length}`;
+
+      // Navigation button states
+      document.getElementById('reader-btn-prev').disabled = readerCurrentChapterIndex <= 0;
+      document.getElementById('reader-footer-prev').disabled = readerCurrentChapterIndex <= 0;
+      document.getElementById('reader-btn-next').disabled = readerCurrentChapterIndex >= chaptersList.length - 1;
+      document.getElementById('reader-footer-next').disabled = readerCurrentChapterIndex >= chaptersList.length - 1;
+
+      // Render text paragraphs
+      const textContainer = document.getElementById('reader-text-container');
+      if (currentChapter.content && currentChapter.content.trim()) {
+        const paras = currentChapter.content.split('\n\n').filter(p => p.trim());
+        textContainer.innerHTML = paras.map(p => `<p>${escapeHtml(p.trim())}</p>`).join('');
+      } else {
+        textContainer.innerHTML = `
+          <div class="py-16 text-center space-y-3">
+            <p class="text-stone-400 italic">Chương này chưa có nội dung văn bản.</p>
+            <button onclick="window.writeChapterDirect(${currentChapter.id})" class="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-semibold">
+              Khởi Tạo Viết Chương Này Ngay
+            </button>
+          </div>
+        `;
+      }
+
+      // Render TOC Drawer list
+      const tocList = document.getElementById('drawer-toc-list');
+      tocList.innerHTML = chaptersList.map((c, idx) => `
+        <button onclick="window.jumpToReaderChapter(${idx})" class="w-full text-left p-2 rounded-lg text-xs transition flex items-center justify-between ${idx === readerCurrentChapterIndex ? 'bg-amber-100 text-amber-900 font-bold' : 'text-stone-700 hover:bg-stone-50'}">
+          <span class="truncate">Chương ${c.chapterNum}: ${c.title}</span>
+          ${c.status === 'completed' ? '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>' : ''}
+        </button>
+      `).join('');
+
+      applyReaderTypographyAndTheme();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      lucide.createIcons();
+    }
+
+    window.jumpToReaderChapter = function(index) {
+      readerCurrentChapterIndex = index;
+      document.getElementById('drawer-toc').classList.add('-translate-x-full');
+      renderReader();
+    };
+
+    function applyReaderTypographyAndTheme() {
+      const canvas = document.getElementById('reader-canvas-container');
+      const article = document.getElementById('reader-content-body');
+      const fontSizeLabel = document.getElementById('reader-font-size-label');
+      const lineHeightLabel = document.getElementById('reader-line-height-label');
+
+      fontSizeLabel.innerText = `${readerFontSize}px`;
+      lineHeightLabel.innerText = readerLineHeight;
+
+      article.style.fontSize = `${readerFontSize}px`;
+      article.style.lineHeight = readerLineHeight;
+
+      // Theme Application
+      canvas.className = 'flex-1 rounded-3xl p-6 sm:p-12 md:p-16 transition-colors duration-300 shadow-md flex flex-col items-center ';
+      if (readerTheme === 'sepia') {
+        canvas.classList.add('bg-[#fbf0d9]', 'text-[#5f4b32]', 'border-[#e8dbbf]');
+      } else if (readerTheme === 'dark') {
+        canvas.classList.add('bg-[#181818]', 'text-[#d1d5db]', 'border-[#27272a]');
+      } else {
+        canvas.classList.add('bg-white', 'text-stone-900', 'border-stone-200/80');
+      }
+    }
+
+    // Reader controls event listeners
+    document.getElementById('reader-btn-font-inc')?.addEventListener('click', () => {
+      if (readerFontSize < 28) {
+        readerFontSize += 2;
+        applyReaderTypographyAndTheme();
+      }
+    });
+
+    document.getElementById('reader-btn-font-dec')?.addEventListener('click', () => {
+      if (readerFontSize > 14) {
+        readerFontSize -= 2;
+        applyReaderTypographyAndTheme();
+      }
+    });
+
+    document.getElementById('reader-btn-line-height')?.addEventListener('click', () => {
+      if (readerLineHeight === 1.5) readerLineHeight = 1.8;
+      else if (readerLineHeight === 1.8) readerLineHeight = 2.0;
+      else readerLineHeight = 1.5;
+      applyReaderTypographyAndTheme();
+    });
+
+    document.getElementById('reader-theme-light')?.addEventListener('click', () => {
+      readerTheme = 'light';
+      applyReaderTypographyAndTheme();
+    });
+    document.getElementById('reader-theme-sepia')?.addEventListener('click', () => {
+      readerTheme = 'sepia';
+      applyReaderTypographyAndTheme();
+    });
+    document.getElementById('reader-theme-dark')?.addEventListener('click', () => {
+      readerTheme = 'dark';
+      applyReaderTypographyAndTheme();
+    });
+
+    document.getElementById('reader-btn-prev')?.addEventListener('click', () => {
+      if (readerCurrentChapterIndex > 0) {
+        readerCurrentChapterIndex--;
+        renderReader();
+      }
+    });
+    document.getElementById('reader-footer-prev')?.addEventListener('click', () => {
+      if (readerCurrentChapterIndex > 0) {
+        readerCurrentChapterIndex--;
+        renderReader();
+      }
+    });
+
+    document.getElementById('reader-btn-next')?.addEventListener('click', () => {
+      if (readerCurrentChapterIndex < chaptersList.length - 1) {
+        readerCurrentChapterIndex++;
+        renderReader();
+      }
+    });
+    document.getElementById('reader-footer-next')?.addEventListener('click', () => {
+      if (readerCurrentChapterIndex < chaptersList.length - 1) {
+        readerCurrentChapterIndex++;
+        renderReader();
+      }
+    });
+
+    document.getElementById('reader-btn-toc')?.addEventListener('click', () => {
+      document.getElementById('drawer-toc').classList.toggle('-translate-x-full');
+    });
+    document.getElementById('btn-close-toc')?.addEventListener('click', () => {
+      document.getElementById('drawer-toc').classList.add('-translate-x-full');
+    });
+
+    document.getElementById('reader-btn-fullscreen')?.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    // ======================================================================
+    // 13. PROJECT SETUP & INITIALIZATION
+    // ======================================================================
+    // Genre dropdown group indicator update
+    document.getElementById('select-genre')?.addEventListener('change', (e) => {
+      const val = e.target.value;
+      const genre = GENRE_PRESETS[val];
+      const pill = document.getElementById('genre-group-pill');
+      const warning = document.getElementById('factual-warning-banner');
+
+      if (genre.group === 2) {
+        pill.innerText = 'Nhóm 2: Tài Liệu Chuẩn Xác 100%';
+        pill.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800';
+        warning.classList.remove('hidden');
+      } else {
+        pill.innerText = 'Nhóm 1: Sáng Tác Hư Cấu';
+        pill.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800';
+        warning.classList.add('hidden');
+      }
+      lucide.createIcons();
+    });
+
+    // Sample File Upload & Extraction
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-sample-input');
+
+    dropzone?.addEventListener('click', () => fileInput?.click());
+    dropzone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('border-amber-700', 'bg-amber-50');
+    });
+    dropzone?.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-amber-700', 'bg-amber-50');
+    });
+    dropzone?.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-amber-700', 'bg-amber-50');
+      if (e.dataTransfer.files?.length > 0) {
+        handleUploadedSampleFile(e.dataTransfer.files[0]);
+      }
+    });
+    fileInput?.addEventListener('change', (e) => {
+      if (e.target.files?.length > 0) {
+        handleUploadedSampleFile(e.target.files[0]);
+      }
+    });
+
+    async function handleUploadedSampleFile(file) {
+      try {
+        const text = await parseSampleFile(file);
+        sampleFileRawText = text;
+        const dna = await extractStyleDna(text);
+        extractedStyleDNA = dna;
+
+        document.getElementById('sample-filename').innerText = file.name;
+        document.getElementById('sample-extracted-text').innerText = dna;
+        document.getElementById('sample-extracted-box').classList.remove('hidden');
+      } catch (err) {
+        alert('Lỗi đọc file mẫu: ' + err.message);
+      }
+    }
+
+    // Add API Keys
+    document.getElementById('btn-add-keys')?.addEventListener('click', async () => {
+      const textarea = document.getElementById('input-api-keys');
+      const val = textarea.value.trim();
+      if (!val) return;
+
+      const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 10);
+      for (const k of lines) {
+        const exists = await db.keys.where('key').equals(k).first();
+        if (!exists) {
+          await db.keys.add({
+            key: k,
+            status: 'active',
+            failCount: 0,
+            unlockAt: 0,
+            successCount: 0
+          });
+        }
+      }
+
+      textarea.value = '';
+      await renderKeysList();
+    });
+
+    document.getElementById('btn-clear-keys')?.addEventListener('click', async () => {
+      if (confirm('Bạn có chắc muốn xóa toàn bộ API Key?')) {
+        await db.keys.clear();
+        await renderKeysList();
+      }
+    });
+
+    // Generate Master Bible Form Submit
+    document.getElementById('form-project')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('input-book-title').value.trim();
+      const author = document.getElementById('input-book-author').value.trim();
+      const genre = document.getElementById('select-genre').value;
+      const plotSummary = document.getElementById('input-plot-summary').value.trim();
+      const totalChapters = parseInt(document.getElementById('input-total-chapters').value) || 5;
+      const wordsPerChapter = parseInt(document.getElementById('input-words-per-chapter').value) || 1200;
+
+      const btn = document.getElementById('btn-generate-bible');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang Quy Hoạch Master Bible & Dàn Ý...`;
+      lucide.createIcons();
+
+      try {
+        const bibleData = await generateMasterBible({
+          title, author, genre, plotSummary, totalChapters, wordsPerChapter,
+          extractedStyle: extractedStyleDNA
+        });
+
+        // Generate Cover Art
+        const coverBase64 = await generateBookCover(title, author, GENRE_PRESETS[genre]?.name || 'Tiểu Thuyết', bibleData.cover_prompt_en || 'Book cover');
+
+        // Create Project in IndexedDB
+        const projectId = await db.projects.add({
+          title,
+          author,
+          genre,
+          plotSummary,
+          totalChapters,
+          wordsPerChapter,
+          extractedStyle: extractedStyleDNA,
+          styleGuideline: bibleData.style_guideline || '',
+          pov: bibleData.pov || 'Ngôi thứ ba',
+          addressingRules: bibleData.addressing_rules || [],
+          coverPrompt: bibleData.cover_prompt_en || '',
+          coverImageBase64: coverBase64,
+          currentChapterIndex: 0,
+          isAutoPilotRunning: false,
+          createdAt: Date.now()
+        });
+
+        currentProject = await db.projects.get(projectId);
+
+        // Populate Chapters in DB
+        const outline = Array.isArray(bibleData.outline) ? bibleData.outline : [];
+        for (let i = 1; i <= totalChapters; i++) {
+          const item = outline.find(o => o.chapter_num === i) || { title: `Chương ${i}`, main_events: '', ending_goal: '' };
+          await db.chapters.add({
+            projectId: projectId,
+            chapterNum: i,
+            title: item.title || `Chương ${i}`,
+            mainEvents: item.main_events || '',
+            endingGoal: item.ending_goal || '',
+            content: '',
+            summary: '',
+            endingSentence: '',
+            status: 'draft',
+            wordCount: 0,
+            updatedAt: Date.now()
+          });
+        }
+
+        await renderWorkspace();
+        switchView('workspace');
+      } catch (err) {
+        alert('Lỗi tạo hồ sơ tác phẩm: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        lucide.createIcons();
+      }
+    });
+
+    // Regenerate Cover
+    document.getElementById('btn-regen-cover')?.addEventListener('click', async () => {
+      if (!currentProject) return;
+      const genreName = GENRE_PRESETS[currentProject.genre]?.name || 'Tiểu Thuyết';
+      const newCover = await generateBookCover(currentProject.title, currentProject.author, genreName, currentProject.coverPrompt);
+      await db.projects.update(currentProject.id, { coverImageBase64: newCover });
+      currentProject.coverImageBase64 = newCover;
+      renderWorkspace();
+    });
+
+    // Navigation Switchers
+    document.getElementById('btn-new-project')?.addEventListener('click', () => {
+      document.getElementById('form-project')?.reset();
+      extractedStyleDNA = '';
+      sampleFileRawText = '';
+      document.getElementById('sample-extracted-box')?.classList.add('hidden');
+      switchView('settings');
+    });
+    document.getElementById('nav-btn-settings')?.addEventListener('click', () => switchView('settings'));
+    document.getElementById('nav-btn-workspace')?.addEventListener('click', () => switchView('workspace'));
+    document.getElementById('nav-btn-reader')?.addEventListener('click', () => {
+      switchView('reader');
+      renderReader();
+    });
+    document.getElementById('nav-btn-export')?.addEventListener('click', () => switchView('export'));
+    document.getElementById('btn-switch-reader-from-ws')?.addEventListener('click', () => {
+      switchView('reader');
+      renderReader();
+    });
+
+    // Export Buttons
+    document.getElementById('btn-export-full-docx')?.addEventListener('click', async () => {
+      if (!currentProject) { alert('Chưa có dự án nào.'); return; }
+      const chapters = await db.chapters.where('projectId').equals(currentProject.id).sortBy('chapterNum');
+      await exportFullBookDocx(currentProject, chapters);
+    });
+
+    document.getElementById('btn-export-full-epub')?.addEventListener('click', async () => {
+      if (!currentProject) { alert('Chưa có dự án nào.'); return; }
+      const chapters = await db.chapters.where('projectId').equals(currentProject.id).sortBy('chapterNum');
+      await exportFullBookEpub(currentProject, chapters);
+    });
+
+    document.getElementById('btn-modal-export-docx')?.addEventListener('click', async () => {
+      if (!currentProject || !currentEditingChapter) return;
+      await exportFullBookDocx(currentProject, [currentEditingChapter]);
+    });
+
+    document.getElementById('btn-modal-export-epub')?.addEventListener('click', async () => {
+      if (!currentProject || !currentEditingChapter) return;
+      await exportFullBookEpub(currentProject, [currentEditingChapter]);
+    });
+
+    // JSON Backup & Restore
+    document.getElementById('btn-backup-json')?.addEventListener('click', async () => {
+      const keys = await db.keys.toArray();
+      const projects = await db.projects.toArray();
+      const chapters = await db.chapters.toArray();
+      const data = { keys, projects, chapters, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      saveAs(blob, `BookStudio_Backup_${new Date().toISOString().slice(0, 10)}.json`);
+    });
+
+    document.getElementById('input-restore-json')?.addEventListener('change', async (e) => {
+      if (e.target.files?.length > 0) {
+        try {
+          const text = await e.target.files[0].text();
+          const data = JSON.parse(text);
+          if (data.keys) await db.keys.bulkPut(data.keys);
+          if (data.projects) await db.projects.bulkPut(data.projects);
+          if (data.chapters) await db.chapters.bulkPut(data.chapters);
+          alert('Khôi phục dữ liệu thành công!');
+          initApp();
+        } catch (err) {
+          alert('Lỗi khôi phục: ' + err.message);
+        }
+      }
+    });
+
+    // ======================================================================
+    // 14. APP INITIALIZATION & PWA SERVICE WORKER
+    // ======================================================================
+    async function initApp() {
+      // 1. Register Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/public/sw.js').catch(err => {
+          console.warn('Service Worker registration skipped in current iframe/environment:', err);
+        });
+      }
+
+      // 2. Load latest project
+      const latestProj = await db.projects.orderBy('createdAt').last();
+      if (latestProj) {
+        currentProject = latestProj;
+        await renderWorkspace();
+        switchView('workspace');
+      } else {
+        switchView('settings');
+      }
+
+      await renderKeysList();
+      lucide.createIcons();
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
