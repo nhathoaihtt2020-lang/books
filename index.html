@@ -7,8 +7,16 @@
   <meta name="description" content="Ứng dụng PWA sáng tác sách dài tập qua Gemini API, xoay vòng API key thông minh, lưu trữ IndexedDB và trình đọc sách chuyên nghiệp mô phỏng Kindle/Apple Books." />
   <meta property="og:title" content="Trình Sáng Tác & E-Reader AI" />
   <meta property="og:description" content="Sáng tác sách dài tập bằng AI, tự động dàn trang và đọc sách chuyên nghiệp." />
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="./manifest.json" />
   <meta name="theme-color" content="#854d0e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Book Studio" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
 
   <!-- Google Fonts: Literata, Lora & Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -107,6 +115,11 @@
         <button id="nav-btn-export" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 text-amber-800 bg-amber-50 hover:bg-amber-100">
           <i data-lucide="download" class="w-4 h-4"></i>
           <span class="hidden sm:inline">Xuất Bản</span>
+        </button>
+        <button id="btn-install-pwa" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5 transition shadow-xs">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Cài App</span>
+          <span class="sm:hidden">Cài</span>
         </button>
       </nav>
     </div>
@@ -351,22 +364,53 @@
         <!-- Left: Master Bible & Cover Details -->
         <div class="lg:col-span-4 space-y-5">
           <!-- Book Cover Card -->
-          <div class="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm space-y-3">
+          <div class="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm space-y-3.5">
             <div class="flex items-center justify-between">
               <h3 class="font-bold text-stone-900 text-sm flex items-center gap-2">
                 <i data-lucide="image" class="w-4 h-4 text-amber-700"></i>
-                Ảnh Bìa Tác Phẩm
+                Ảnh Bìa Nghệ Thuật AI
               </h3>
-              <a id="link-download-cover" href="#" download="cover.png" class="text-xs text-amber-800 hover:underline hidden">Tải ảnh</a>
+              <a id="link-download-cover" href="#" download="cover.png" class="text-xs text-amber-800 hover:text-amber-900 font-medium hover:underline flex items-center gap-1 hidden">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Tải ảnh</span>
+              </a>
             </div>
-            <div class="aspect-[2/3] w-full max-w-[240px] mx-auto rounded-xl overflow-hidden bg-stone-100 border border-stone-200 shadow-md relative group">
+
+            <!-- Cover Preview with Loading State -->
+            <div class="aspect-[2/3] w-full max-w-[240px] mx-auto rounded-xl overflow-hidden bg-stone-900 border border-stone-200 shadow-lg relative group">
               <img id="workspace-cover-img" src="" alt="Bìa sách" class="w-full h-full object-cover hidden" />
               <div id="workspace-cover-placeholder" class="w-full h-full flex flex-col items-center justify-center p-4 text-center text-stone-400 space-y-2">
                 <i data-lucide="sparkles" class="w-8 h-8 text-amber-600/60"></i>
                 <span class="text-xs">Đang chờ tạo ảnh bìa...</span>
               </div>
+              <!-- Loading Overlay -->
+              <div id="cover-loading-overlay" class="hidden absolute inset-0 bg-stone-950/85 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center space-y-2.5 text-white z-10">
+                <i data-lucide="loader-2" class="w-7 h-7 text-amber-500 animate-spin"></i>
+                <span id="cover-loading-text" class="text-xs font-medium text-amber-200 leading-snug">AI đang vẽ minh họa bìa theo nội dung...</span>
+              </div>
             </div>
-            <p id="workspace-cover-prompt" class="text-[11px] text-stone-500 italic bg-stone-50 p-2.5 rounded-lg border border-stone-100 line-clamp-3"></p>
+
+            <!-- Action Buttons: Regenerate & Upload -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button id="btn-regen-cover" class="px-3 py-2 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs">
+                <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                <span>AI Vẽ Lại Bìa</span>
+              </button>
+              <label for="input-custom-cover" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer text-center">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                <span>Tự Tải Ảnh Lên</span>
+                <input type="file" id="input-custom-cover" accept="image/*" class="hidden" />
+              </label>
+            </div>
+
+            <!-- Prompt Edit Container -->
+            <div class="space-y-1.5 pt-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="font-medium text-stone-600">Mô tả tranh bìa (Prompt cho AI):</span>
+                <span class="text-stone-400">Có thể chỉnh sửa</span>
+              </div>
+              <textarea id="workspace-cover-prompt" rows="3" class="w-full text-[11px] text-stone-700 bg-stone-50 p-2.5 rounded-xl border border-stone-200 focus:ring-1 focus:ring-amber-700 focus:outline-none resize-none leading-relaxed" placeholder="Mô tả chi tiết tranh minh họa (tiếng Anh để AI vẽ đẹp nhất)..."></textarea>
+            </div>
           </div>
 
           <!-- Master Bible Accordion / Info -->
@@ -826,7 +870,6 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
           throw err;
         }
 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${keyObj.key}`;
         const payload = {
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
@@ -843,11 +886,32 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
         }
 
         try {
-          const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+          const candidateModels = ['gemini-3.6-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+          let res = null;
+          let lastErrorMessage = '';
+
+          for (const model of candidateModels) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keyObj.key}`;
+            const candidateRes = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            if (candidateRes.status === 404) {
+              const errData = await candidateRes.json().catch(() => ({}));
+              lastErrorMessage = errData.error?.message || 'Model not found';
+              console.warn(`Model ${model} returned 404 on current key:`, lastErrorMessage);
+              continue; // try next candidate model
+            }
+
+            res = candidateRes;
+            break;
+          }
+
+          if (!res) {
+            throw new Error(`Gemini API Error (404): ${lastErrorMessage || 'Không tìm thấy model AI phù hợp.'}`);
+          }
 
           if (res.status === 429) {
             console.warn(`Key ${keyObj.key.slice(0, 8)}... rate limited (429). Rotating key...`);
@@ -905,118 +969,226 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
     }
 
     // ======================================================================
-    // 6. BOOK COVER ART GENERATOR (CANVAS ARTWORK & IMAGEN INTEGRATION)
+    // 6. BOOK COVER ART GENERATOR (AI ILLUSTRATION & EDITORIAL COMPOSITING)
     // ======================================================================
-    async function generateBookCover(title, author, genreName, promptEn) {
-      // Try Imagen API first if supported
+    async function fetchAiArtwork(promptEn, title, genreName) {
+      const defaultDesc = `Epic, cinematic, highly detailed illustration for a book titled '${title}', genre ${genreName}. Deep storytelling atmosphere, dramatic lighting, masterpiece`;
+      const basePrompt = (promptEn && promptEn.trim().length > 10) ? promptEn.trim() : defaultDesc;
+      const cleanPrompt = `${basePrompt}, professional book cover artwork, digital art masterpiece, cinematic lighting, 8k resolution, highly detailed, vibrant colors, no typography, no text, no title, no letters, no watermark`;
+
+      // 1. Try Imagen 3 API if Gemini key supports it
       try {
         const keyObj = await getActiveKey();
-        const imagenEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${keyObj.key}`;
-        const res = await fetch(imagenEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            instances: [{ prompt: `${promptEn}, book cover illustration, no typography, professional editorial art, masterpiece` }],
-            parameters: { sampleCount: 1, aspectRatio: '3:4' }
-          })
-        });
-        if (res.ok) {
-          const imgData = await res.json();
-          const base64 = imgData.predictions?.[0]?.bytesBase64Encoded;
-          if (base64) {
-            return `data:image/jpeg;base64,${base64}`;
+        if (keyObj && keyObj.key) {
+          const imagenEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${keyObj.key}`;
+          const res = await fetch(imagenEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instances: [{ prompt: cleanPrompt }],
+              parameters: { sampleCount: 1, aspectRatio: '3:4' }
+            })
+          });
+          if (res.ok) {
+            const imgData = await res.json();
+            const b64 = imgData.predictions?.[0]?.bytesBase64Encoded;
+            if (b64) {
+              return `data:image/jpeg;base64,${b64}`;
+            }
           }
         }
       } catch (err) {
-        console.warn('Imagen not directly accessible, generating high-res artistic SVG book cover canvas...', err);
+        console.warn('Imagen 3 direct call skipped/failed, proceeding to AI illustration engine...', err);
       }
 
-      // High-Craft Client-Side Book Cover Render via Canvas
-      return renderArtisticCoverCanvas(title, author, genreName);
+      // 2. High-Quality Free AI Art Engine (Flux / SDXL via Pollinations with CORS support)
+      try {
+        const seed = Math.floor(Math.random() * 1000000);
+        const encoded = encodeURIComponent(cleanPrompt.substring(0, 480));
+        const url = `https://image.pollinations.ai/prompt/${encoded}?width=800&height=1200&model=flux&nologo=true&seed=${seed}`;
+        
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 28000);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (res.ok) {
+          const blob = await res.blob();
+          return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (err) {
+        console.warn('Pollinations AI art fetch error:', err);
+      }
+
+      return null;
     }
 
-    function renderArtisticCoverCanvas(title, author, genreName) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = 1200;
-      const ctx = canvas.getContext('2d');
-
-      // Gradient background based on genre
-      const grad = ctx.createLinearGradient(0, 0, 800, 1200);
-      grad.addColorStop(0, '#1c1917');
-      grad.addColorStop(0.5, '#292524');
-      grad.addColorStop(1, '#0c0a09');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 800, 1200);
-
-      // Gold ornate border
-      ctx.strokeStyle = '#d97706';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(40, 40, 720, 1120);
-
-      ctx.strokeStyle = '#78350f';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(48, 48, 704, 1104);
-
-      // Corner ornaments
-      function drawCorner(x, y) {
-        ctx.fillStyle = '#f59e0b';
-        ctx.beginPath();
-        ctx.arc(x, y, 6, 0, Math.PI * 2);
-        ctx.fill();
+    async function generateBookCover(title, author, genreName, promptEn) {
+      let artworkBase64 = null;
+      try {
+        artworkBase64 = await fetchAiArtwork(promptEn, title, genreName);
+      } catch (err) {
+        console.warn('Cover illustration error:', err);
       }
-      drawCorner(40, 40);
-      drawCorner(760, 40);
-      drawCorner(40, 1160);
-      drawCorner(760, 1160);
+      return await renderArtisticCoverCanvas(title, author, genreName, artworkBase64);
+    }
 
-      // Genre Badge
-      ctx.fillStyle = '#b45309';
-      ctx.font = '600 24px "Plus Jakarta Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.letterSpacing = '4px';
-      ctx.fillText(genreName.toUpperCase(), 400, 260);
+    function renderArtisticCoverCanvas(title, author, genreName, artworkBase64 = null) {
+      return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 1200;
+        const ctx = canvas.getContext('2d');
 
-      // Title (Multi-line wrap)
-      ctx.fillStyle = '#fbf0d9';
-      ctx.font = '700 56px "Literata", serif';
-      ctx.textAlign = 'center';
-      
-      const words = title.split(' ');
-      let line = '';
-      let y = 420;
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > 600 && n > 0) {
+        const drawTypographyAndBorders = (hasImage) => {
+          // Dark gradient vignettes to guarantee text legibility over any AI artwork
+          if (hasImage) {
+            // Top vignette (for genre & title)
+            const topGrad = ctx.createLinearGradient(0, 0, 0, 580);
+            topGrad.addColorStop(0, 'rgba(10, 8, 7, 0.85)');
+            topGrad.addColorStop(0.55, 'rgba(15, 12, 10, 0.55)');
+            topGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = topGrad;
+            ctx.fillRect(0, 0, 800, 580);
+
+            // Bottom vignette (for author & publisher)
+            const btmGrad = ctx.createLinearGradient(0, 750, 0, 1200);
+            btmGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            btmGrad.addColorStop(0.5, 'rgba(15, 12, 10, 0.65)');
+            btmGrad.addColorStop(1, 'rgba(10, 8, 7, 0.92)');
+            ctx.fillStyle = btmGrad;
+            ctx.fillRect(0, 750, 800, 450);
+          }
+
+          // Gold ornate borders
+          ctx.strokeStyle = hasImage ? 'rgba(217, 119, 6, 0.75)' : '#d97706';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(36, 36, 728, 1128);
+
+          ctx.strokeStyle = hasImage ? 'rgba(180, 83, 9, 0.4)' : '#78350f';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(44, 44, 712, 1112);
+
+          // Corner ornaments
+          function drawCorner(x, y) {
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          drawCorner(36, 36);
+          drawCorner(764, 36);
+          drawCorner(36, 1164);
+          drawCorner(764, 1164);
+
+          // Genre Badge Pill
+          const genreBadgeText = (genreName || 'TIỂU THUYẾT').toUpperCase();
+          ctx.save();
+          ctx.font = '600 22px "Plus Jakarta Sans", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.letterSpacing = '4px';
+          ctx.fillStyle = '#fbbf24';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+          ctx.shadowBlur = 8;
+          ctx.fillText(genreBadgeText, 400, 140);
+          ctx.restore();
+
+          // Title Typography
+          ctx.save();
+          ctx.fillStyle = '#fffbeb';
+          ctx.font = '700 52px "Literata", serif';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+          ctx.shadowBlur = 16;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 3;
+
+          const words = (title || 'Tác Phẩm').split(' ');
+          let line = '';
+          let y = 240;
+          for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > 620 && n > 0) {
+              ctx.fillText(line.trim(), 400, y);
+              line = words[n] + ' ';
+              y += 70;
+            } else {
+              line = testLine;
+            }
+          }
           ctx.fillText(line.trim(), 400, y);
-          line = words[n] + ' ';
-          y += 75;
+
+          // Central Decorative Divider
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2;
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.moveTo(320, y + 40);
+          ctx.lineTo(480, y + 40);
+          ctx.stroke();
+          ctx.restore();
+
+          // Author Name
+          ctx.save();
+          ctx.fillStyle = '#fef3c7';
+          ctx.font = '600 28px "Plus Jakarta Sans", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+          ctx.shadowBlur = 12;
+          ctx.shadowOffsetY = 2;
+          ctx.fillText(author || 'Tác Giả', 400, 1020);
+          ctx.restore();
+
+          // Publisher Imprint
+          ctx.save();
+          ctx.fillStyle = '#d6d3d1';
+          ctx.font = '400 16px "Plus Jakarta Sans", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.letterSpacing = '2px';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+          ctx.shadowBlur = 6;
+          ctx.fillText('XUẤT BẢN KỸ THUẬT SỐ • AI STUDIO', 400, 1095);
+          ctx.restore();
+        };
+
+        if (artworkBase64) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            // Draw AI Illustration
+            ctx.drawImage(img, 0, 0, 800, 1200);
+            drawTypographyAndBorders(true);
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
+          };
+          img.onerror = () => {
+            console.warn('Failed to load artwork image into canvas, using luxury fallback gradient.');
+            drawFallbackGradient();
+            drawTypographyAndBorders(false);
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
+          };
+          img.src = artworkBase64;
         } else {
-          line = testLine;
+          drawFallbackGradient();
+          drawTypographyAndBorders(false);
+          resolve(canvas.toDataURL('image/jpeg', 0.92));
         }
-      }
-      ctx.fillText(line.trim(), 400, y);
 
-      // Central divider
-      ctx.strokeStyle = '#d97706';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(300, y + 60);
-      ctx.lineTo(500, y + 60);
-      ctx.stroke();
-
-      // Author name
-      ctx.fillStyle = '#e7e5e4';
-      ctx.font = '500 28px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(author, 400, 960);
-
-      // Publisher watermark
-      ctx.fillStyle = '#78716c';
-      ctx.font = '400 18px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText('XUẤT BẢN KỸ THUẬT SỐ • AI STUDIO', 400, 1080);
-
-      return canvas.toDataURL('image/png');
+        function drawFallbackGradient() {
+          const grad = ctx.createLinearGradient(0, 0, 800, 1200);
+          grad.addColorStop(0, '#1c1917');
+          grad.addColorStop(0.5, '#292524');
+          grad.addColorStop(1, '#0c0a09');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 800, 1200);
+        }
+      });
     }
 
     // ======================================================================
@@ -1569,17 +1741,26 @@ ${spineItems}
       const coverPlaceholder = document.getElementById('workspace-cover-placeholder');
       const coverPromptEl = document.getElementById('workspace-cover-prompt');
       const thumb = document.getElementById('workspace-cover-thumbnail');
+      const downloadLink = document.getElementById('link-download-cover');
 
-      coverPromptEl.innerText = currentProject.coverPrompt || 'Mô tả ảnh bìa';
+      if (coverPromptEl) {
+        coverPromptEl.value = currentProject.coverPrompt || '';
+      }
 
       if (currentProject.coverImageBase64) {
         coverImg.src = currentProject.coverImageBase64;
         coverImg.classList.remove('hidden');
         coverPlaceholder.classList.add('hidden');
         thumb.innerHTML = `<img src="${currentProject.coverImageBase64}" class="w-full h-full object-cover" />`;
+        if (downloadLink) {
+          downloadLink.href = currentProject.coverImageBase64;
+          downloadLink.download = `${(currentProject.title || 'bia_sach').replace(/[\s\/\\]+/g, '_')}_BiaSach.jpg`;
+          downloadLink.classList.remove('hidden');
+        }
       } else {
         coverImg.classList.add('hidden');
         coverPlaceholder.classList.remove('hidden');
+        if (downloadLink) downloadLink.classList.add('hidden');
       }
 
       // Chapters List
@@ -2070,14 +2251,68 @@ ${spineItems}
       }
     });
 
-    // Regenerate Cover
+    // Regenerate Cover with AI (Flux / Imagen)
     document.getElementById('btn-regen-cover')?.addEventListener('click', async () => {
       if (!currentProject) return;
-      const genreName = GENRE_PRESETS[currentProject.genre]?.name || 'Tiểu Thuyết';
-      const newCover = await generateBookCover(currentProject.title, currentProject.author, genreName, currentProject.coverPrompt);
-      await db.projects.update(currentProject.id, { coverImageBase64: newCover });
-      currentProject.coverImageBase64 = newCover;
-      renderWorkspace();
+      const promptInput = document.getElementById('workspace-cover-prompt');
+      const promptVal = promptInput ? promptInput.value.trim() : '';
+      const promptToUse = promptVal || currentProject.coverPrompt || `${currentProject.title}, book cover masterpiece illustration`;
+
+      const loadingOverlay = document.getElementById('cover-loading-overlay');
+      const loadingText = document.getElementById('cover-loading-text');
+      const regenBtn = document.getElementById('btn-regen-cover');
+      
+      if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+      if (loadingText) loadingText.innerText = 'AI đang vẽ minh họa tranh bìa theo nội dung tác phẩm...';
+      if (regenBtn) regenBtn.disabled = true;
+
+      try {
+        const genreName = GENRE_PRESETS[currentProject.genre]?.name || 'Tiểu Thuyết';
+        const newCover = await generateBookCover(currentProject.title, currentProject.author, genreName, promptToUse);
+        await db.projects.update(currentProject.id, {
+          coverImageBase64: newCover,
+          coverPrompt: promptToUse
+        });
+        currentProject.coverImageBase64 = newCover;
+        currentProject.coverPrompt = promptToUse;
+        await renderWorkspace();
+      } catch (err) {
+        alert('Lỗi tạo ảnh bìa: ' + err.message);
+      } finally {
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        if (regenBtn) regenBtn.disabled = false;
+        lucide.createIcons();
+      }
+    });
+
+    // Upload custom cover image from device
+    document.getElementById('input-custom-cover')?.addEventListener('change', async (e) => {
+      if (!currentProject || !e.target.files || e.target.files.length === 0) return;
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      const loadingOverlay = document.getElementById('cover-loading-overlay');
+      if (loadingOverlay) {
+        loadingOverlay.classList.remove('hidden');
+        const loadingText = document.getElementById('cover-loading-text');
+        if (loadingText) loadingText.innerText = 'Đang ghép bìa nghệ thuật từ ảnh của bạn...';
+      }
+
+      reader.onload = async (event) => {
+        try {
+          const customDataUrl = event.target.result;
+          const genreName = GENRE_PRESETS[currentProject.genre]?.name || 'Tiểu Thuyết';
+          const newCover = await renderArtisticCoverCanvas(currentProject.title, currentProject.author, genreName, customDataUrl);
+          await db.projects.update(currentProject.id, { coverImageBase64: newCover });
+          currentProject.coverImageBase64 = newCover;
+          await renderWorkspace();
+        } catch (err) {
+          alert('Lỗi xử lý ảnh: ' + err.message);
+        } finally {
+          if (loadingOverlay) loadingOverlay.classList.add('hidden');
+          lucide.createIcons();
+        }
+      };
+      reader.readAsDataURL(file);
     });
 
     // Navigation Switchers
@@ -2155,8 +2390,8 @@ ${spineItems}
     async function initApp() {
       // 1. Register Service Worker
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {
-          return navigator.serviceWorker.register('/public/sw.js');
+        navigator.serviceWorker.register('./sw.js').catch(() => {
+          return navigator.serviceWorker.register('./public/sw.js');
         }).catch(err => {
           console.warn('Service Worker registration skipped in current iframe/environment:', err);
         });
@@ -2171,6 +2406,49 @@ ${spineItems}
       } else {
         switchView('settings');
       }
+
+      // 3. PWA Installation Event & Mode Handling
+      let deferredInstallPrompt = null;
+      const installBtn = document.getElementById('btn-install-pwa');
+
+      // Hide install button if already running as installed standalone app
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (isStandalone && installBtn) {
+        installBtn.classList.add('hidden');
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        if (installBtn && !isStandalone) {
+          installBtn.classList.remove('hidden');
+        }
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        if (installBtn) installBtn.classList.add('hidden');
+        console.log('Book Studio PWA was successfully installed.');
+      });
+
+      installBtn?.addEventListener('click', async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          const { outcome } = await deferredInstallPrompt.userChoice;
+          if (outcome === 'accepted') {
+            installBtn.classList.add('hidden');
+          }
+          deferredInstallPrompt = null;
+        } else {
+          // Fallback instructions for iOS Safari or browsers without beforeinstallprompt
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          if (isIOS) {
+            alert('📱 Hướng dẫn cài đặt App trên iPhone/iPad (không dính thanh địa chỉ):\n\n1. Nhấn nút Chia sẻ (biểu tượng hình vuông có mũi tên lên ở thanh dưới cùng Safari).\n2. Cuộn xuống và chọn "Thêm vào MH chính" (Add to Home Screen).\n3. Nhấn "Thêm". Ứng dụng sẽ xuất hiện trên màn hình chính như một app tải từ App Store!');
+          } else {
+            alert('📱 Hướng dẫn cài đặt App trên Android (không dính thanh địa chỉ):\n\n1. Bấm vào biểu tượng 3 chấm ⋮ ở góc trên bên phải trình duyệt Chrome.\n2. Chọn "Cài đặt ứng dụng" (hoặc "Thêm vào Màn hình chính").\n3. Trình duyệt sẽ đóng gói thành App thực thụ (WebAPK) không còn thanh URL!');
+          }
+        }
+      });
 
       await renderKeysList();
       lucide.createIcons();
