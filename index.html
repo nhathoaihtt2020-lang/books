@@ -7,7 +7,7 @@
   <meta name="description" content="Ứng dụng PWA sáng tác sách dài tập qua Gemini API, xoay vòng API key thông minh, lưu trữ IndexedDB và trình đọc sách chuyên nghiệp mô phỏng Kindle/Apple Books." />
   <meta property="og:title" content="Trình Sáng Tác & E-Reader AI" />
   <meta property="og:description" content="Sáng tác sách dài tập bằng AI, tự động dàn trang và đọc sách chuyên nghiệp." />
-  <link rel="manifest" href="/public/manifest.json" />
+  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#854d0e" />
 
   <!-- Google Fonts: Literata, Lora & Plus Jakarta Sans -->
@@ -2155,7 +2155,9 @@ ${spineItems}
     async function initApp() {
       // 1. Register Service Worker
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/public/sw.js').catch(err => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+          return navigator.serviceWorker.register('/public/sw.js');
+        }).catch(err => {
           console.warn('Service Worker registration skipped in current iframe/environment:', err);
         });
       }
