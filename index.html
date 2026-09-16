@@ -177,10 +177,10 @@
 
         <!-- Auth Tabs: Login / Register -->
         <div class="flex rounded-xl bg-stone-100 p-1 border border-stone-200">
-          <button id="tab-auth-login" class="flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-stone-900 shadow-xs">
+          <button id="tab-auth-login" type="button" onclick="window.switchAuthTab && window.switchAuthTab('login')" class="flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-stone-900 shadow-xs cursor-pointer">
             Đăng Nhập
           </button>
-          <button id="tab-auth-register" class="flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900">
+          <button id="tab-auth-register" type="button" onclick="window.switchAuthTab && window.switchAuthTab('register')" class="flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900 cursor-pointer">
             Đăng Ký Mới
           </button>
         </div>
@@ -1233,7 +1233,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
 
       const passHash = await hashPassword(password);
 
-      // Check existence in Firestore if connected
+      // Check existence in Firestore and save user record
       if (firestoreDb) {
         try {
           const userRef = doc(firestoreDb, 'users', cleanUsername);
@@ -1244,13 +1244,16 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
 
           await setDoc(userRef, {
             username: cleanUsername,
+            userId: cleanUsername,
             passwordHash: passHash,
+            apiKeys: [],
             createdAt: Date.now(),
             lastLoginAt: Date.now()
           });
+          console.log(`[Cloud Auth] Đã lưu thông tin tài khoản user "${cleanUsername}" lên Cloud Firestore thành công.`);
         } catch (err) {
           if (err.message && err.message.includes('đã tồn tại')) throw err;
-          console.warn('Firestore offline/warning, caching locally:', err);
+          console.warn('[Cloud Auth] Firestore connection notice, account saved in local secure store:', err);
         }
       }
 
@@ -3790,25 +3793,53 @@ ${spineItems}
     // ======================================================================
     // 13.5 AUTHENTICATION & CLOUD SYNC EVENT LISTENERS
     // ======================================================================
-    const tabLoginBtn = document.getElementById('tab-login-btn');
-    const tabRegBtn = document.getElementById('tab-register-btn');
+    const tabLoginBtn = document.getElementById('tab-auth-login') || document.getElementById('tab-login-btn');
+    const tabRegBtn = document.getElementById('tab-auth-register') || document.getElementById('tab-register-btn');
     const formLogin = document.getElementById('form-auth-login');
     const formRegister = document.getElementById('form-auth-register');
 
-    tabLoginBtn?.addEventListener('click', () => {
-      tabLoginBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-white text-stone-900 shadow-sm transition';
-      tabRegBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-stone-600 hover:text-stone-900 transition';
-      formLogin?.classList.remove('hidden');
-      formRegister?.classList.add('hidden');
-      hideAuthAlert();
-    });
+    function switchAuthTab(mode) {
+      if (mode === 'register') {
+        if (tabRegBtn) {
+          tabRegBtn.className = 'flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-stone-900 shadow-xs cursor-pointer';
+        }
+        if (tabLoginBtn) {
+          tabLoginBtn.className = 'flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900 cursor-pointer';
+        }
+        formRegister?.classList.remove('hidden');
+        formLogin?.classList.add('hidden');
+        hideAuthAlert();
+        document.getElementById('reg-username')?.focus();
+      } else {
+        if (tabLoginBtn) {
+          tabLoginBtn.className = 'flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-stone-900 shadow-xs cursor-pointer';
+        }
+        if (tabRegBtn) {
+          tabRegBtn.className = 'flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900 cursor-pointer';
+        }
+        formLogin?.classList.remove('hidden');
+        formRegister?.classList.add('hidden');
+        hideAuthAlert();
+        document.getElementById('login-username')?.focus();
+      }
+    }
+    window.switchAuthTab = switchAuthTab;
 
-    tabRegBtn?.addEventListener('click', () => {
-      tabRegBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-white text-stone-900 shadow-sm transition';
-      tabLoginBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-stone-600 hover:text-stone-900 transition';
-      formRegister?.classList.remove('hidden');
-      formLogin?.classList.add('hidden');
-      hideAuthAlert();
+    tabLoginBtn?.addEventListener('click', () => switchAuthTab('login'));
+    tabRegBtn?.addEventListener('click', () => switchAuthTab('register'));
+
+    // Also attach by onclick attribute or direct element listeners in case of duplicate references
+    document.querySelectorAll('#tab-auth-register, #tab-register-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchAuthTab('register');
+      });
+    });
+    document.querySelectorAll('#tab-auth-login, #tab-login-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchAuthTab('login');
+      });
     });
 
     // Handle Login Form Submit
