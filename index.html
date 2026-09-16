@@ -404,9 +404,14 @@
                 <i data-lucide="cloud" class="w-4 h-4 text-emerald-700"></i>
                 <span>Hạ Tầng Lưu Trữ & Đồng Bộ Cloud</span>
               </h3>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span> Sẵn Sàng
-              </span>
+              <div class="flex items-center gap-1.5">
+                <button id="btn-open-cloud-config" type="button" class="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center gap-1 transition" title="Xem hoặc cập nhật thông số kết nối Cloud">
+                  <i data-lucide="settings" class="w-3 h-3"></i> Cấu Hình
+                </button>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span> Sẵn Sàng
+                </span>
+              </div>
             </div>
 
             <div class="space-y-2 text-[11px]">
@@ -966,6 +971,95 @@
     </div>
   </div>
 
+  <!-- MODAL: CLOUD SETTINGS & API CREDENTIALS -->
+  <div id="modal-cloud-config" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-stone-200 overflow-hidden">
+      <div class="p-4 sm:p-5 border-b border-stone-200 flex items-center justify-between bg-stone-50">
+        <div class="flex items-center gap-2">
+          <i data-lucide="cloud" class="w-5 h-5 text-emerald-700"></i>
+          <h3 class="font-bold text-stone-900 text-base">Cấu Hình Kết Nối Cloud</h3>
+        </div>
+        <button id="btn-close-cloud-config" class="p-2 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-200/60 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-6 flex-1 overflow-y-auto space-y-4 text-xs">
+        <p class="text-stone-500">
+          Cấu hình thông số kết nối cơ sở dữ liệu Cloud (Database & Authentication). Dữ liệu này được lưu cục bộ trên trình duyệt của bạn.
+        </p>
+
+        <div class="space-y-2.5 p-3.5 bg-stone-50 rounded-xl border border-stone-200">
+          <div class="font-semibold text-stone-800 text-xs flex items-center gap-1.5">
+            <i data-lucide="database" class="w-4 h-4 text-amber-700"></i>
+            Thông Số Cloud Database (Firebase Firestore)
+          </div>
+          <div class="space-y-1">
+            <label class="font-medium text-stone-600">Project ID:</label>
+            <input type="text" id="cfg-firebase-project-id" placeholder="vd: book-creator-2026" class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+          </div>
+          <div class="space-y-1">
+            <label class="font-medium text-stone-600">API Key:</label>
+            <input type="text" id="cfg-firebase-api-key" placeholder="AIzaSy..." class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="font-medium text-stone-600">Auth Domain:</label>
+              <input type="text" id="cfg-firebase-auth-domain" placeholder="project.firebaseapp.com" class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+            </div>
+            <div class="space-y-1">
+              <label class="font-medium text-stone-600">Storage Bucket:</label>
+              <input type="text" id="cfg-firebase-storage-bucket" placeholder="project.appspot.com" class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-2.5 p-3.5 bg-stone-50 rounded-xl border border-stone-200">
+          <div class="font-semibold text-stone-800 text-xs flex items-center gap-1.5">
+            <i data-lucide="hard-drive" class="w-4 h-4 text-emerald-700"></i>
+            Kho Lưu Trữ File Xuất Bản
+          </div>
+          <div class="space-y-1">
+            <label class="font-medium text-stone-600">Storage URL:</label>
+            <input type="text" id="cfg-supabase-url" placeholder="https://xxx.supabase.co" class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+          </div>
+          <div class="space-y-1">
+            <label class="font-medium text-stone-600">Anon Public Key:</label>
+            <input type="text" id="cfg-supabase-key" placeholder="eyJhbGci..." class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+          </div>
+        </div>
+
+        <div class="space-y-2.5 p-3.5 bg-stone-50 rounded-xl border border-stone-200">
+          <div class="font-semibold text-stone-800 text-xs flex items-center gap-1.5">
+            <i data-lucide="image" class="w-4 h-4 text-blue-700"></i>
+            Kho Lưu Trữ Ảnh Bìa
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="font-medium text-stone-600">Cloud Name:</label>
+              <input type="text" id="cfg-cloudinary-cloud" placeholder="vd: dkh3o2wqq" class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+            </div>
+            <div class="space-y-1">
+              <label class="font-medium text-stone-600">Upload Preset:</label>
+              <input type="text" id="cfg-cloudinary-preset" placeholder="vd: ml_default" class="w-full p-2 bg-white border border-stone-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-stone-200 bg-stone-50 flex items-center justify-between">
+        <button id="btn-reset-cloud-config" class="text-xs text-stone-500 hover:text-red-600 transition">Đặt lại mặc định</button>
+        <div class="flex items-center gap-2">
+          <button id="btn-cancel-cloud-config" class="px-4 py-2 text-stone-600 hover:bg-stone-200/60 rounded-xl text-xs font-medium transition">Hủy</button>
+          <button id="btn-save-cloud-config" class="px-5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            Lưu & Tải Lại Kết Nối
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOC Drawer for Reader -->
   <div id="drawer-toc" class="fixed inset-y-0 left-0 z-40 w-72 bg-white shadow-2xl border-r border-stone-200 p-5 transform -translate-x-full transition-transform duration-300 flex flex-col">
     <div class="flex items-center justify-between pb-4 border-b border-stone-100">
@@ -1031,9 +1125,21 @@
     try {
       firebaseApp = initializeApp(CLOUD_CONFIG.firebase);
       firestoreDb = getFirestore(firebaseApp);
-      console.log('Firebase Firestore successfully initialized.');
+      console.log('Firebase Firestore initialized with Project ID:', CLOUD_CONFIG.firebase?.projectId);
     } catch (err) {
       console.warn('Firebase init warning:', err);
+    }
+
+    // Helper: withTimeout to prevent network hanging when Firebase credentials are dummy or rules reject
+    function withTimeout(promise, ms = 4000, fallbackMsg = 'Hết thời gian chờ kết nối Cloud') {
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(fallbackMsg)), ms);
+      });
+      return Promise.race([
+        promise.then(res => { clearTimeout(timeoutId); return res; }),
+        timeoutPromise
+      ]);
     }
 
     // Initialize Supabase
@@ -1234,26 +1340,33 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       const passHash = await hashPassword(password);
 
       // Check existence in Firestore and save user record
+      let savedToFirestore = false;
+      let firestoreErrorDetails = null;
+
       if (firestoreDb) {
         try {
           const userRef = doc(firestoreDb, 'users', cleanUsername);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
+          // Check existence with 4-second timeout to prevent network lockup
+          const userSnap = await withTimeout(getDoc(userRef), 4000, 'Firestore timeout checking user');
+          if (userSnap && userSnap.exists()) {
             throw new Error(`Tên tài khoản "${cleanUsername}" đã tồn tại. Vui lòng chọn tên khác hoặc đăng nhập.`);
           }
 
-          await setDoc(userRef, {
+          await withTimeout(setDoc(userRef, {
             username: cleanUsername,
             userId: cleanUsername,
             passwordHash: passHash,
             apiKeys: [],
             createdAt: Date.now(),
             lastLoginAt: Date.now()
-          });
+          }), 4000, 'Firestore timeout saving user');
+          
+          savedToFirestore = true;
           console.log(`[Cloud Auth] Đã lưu thông tin tài khoản user "${cleanUsername}" lên Cloud Firestore thành công.`);
         } catch (err) {
           if (err.message && err.message.includes('đã tồn tại')) throw err;
-          console.warn('[Cloud Auth] Firestore connection notice, account saved in local secure store:', err);
+          firestoreErrorDetails = err.message || err.toString();
+          console.warn('[Cloud Auth] Không thể lưu Firestore (kiểm tra Rules hoặc Project ID):', err);
         }
       }
 
@@ -1263,7 +1376,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       localStorage.setItem('bookstudio_local_users', JSON.stringify(localUsers));
 
       // Login session
-      currentUser = { userId: cleanUsername, username: cleanUsername };
+      currentUser = { userId: cleanUsername, username: cleanUsername, savedToFirestore };
       localStorage.setItem('bookstudio_auth_user', JSON.stringify(currentUser));
       return currentUser;
     }
@@ -1277,23 +1390,23 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
 
       let authenticated = false;
 
-      // 1. Verify with Firestore
+      // 1. Fast verify with Firestore (with 3.5s timeout)
       if (firestoreDb) {
         try {
           const userRef = doc(firestoreDb, 'users', cleanUsername);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
+          const userSnap = await withTimeout(getDoc(userRef), 3500, 'Firestore getDoc timeout');
+          if (userSnap && userSnap.exists()) {
             const data = userSnap.data();
             if (data.passwordHash === passHash) {
               authenticated = true;
-              await updateDoc(userRef, { lastLoginAt: Date.now() }).catch(() => {});
+              updateDoc(userRef, { lastLoginAt: Date.now() }).catch(() => {});
             } else {
               throw new Error('Mật khẩu không chính xác. Vui lòng kiểm tra lại!');
             }
           }
         } catch (err) {
           if (err.message && err.message.includes('Mật khẩu không chính xác')) throw err;
-          console.warn('Firestore check error, checking local store:', err);
+          console.warn('Firestore login check error, falling back to local store:', err);
         }
       }
 
@@ -1310,7 +1423,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       }
 
       if (!authenticated) {
-        throw new Error(`Tài khoản "${cleanUsername}" không tồn tại. Hãy bấm qua tab "Đăng Ký Mới" để tạo tài khoản nhé!`);
+        throw new Error(`Tài khoản "${cleanUsername}" không tồn tại hoặc chưa thể kết nối Cloud. Hãy bấm qua tab "Đăng Ký Mới" để tạo tài khoản nhé!`);
       }
 
       currentUser = { userId: cleanUsername, username: cleanUsername };
@@ -1447,50 +1560,58 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       updateSyncBadge('Đang đồng bộ...');
       try {
         // 1. Sync API keys from cloud
-        await syncApiKeysFromFirestore();
+        await withTimeout(syncApiKeysFromFirestore(), 4000).catch(e => console.warn('syncApiKeys timeout/err:', e));
 
-        // 2. Sync Books & Chapters
+        // 2. Sync Books & Chapters with timeout
         const booksCol = collection(firestoreDb, 'users', currentUser.userId, 'books');
-        const booksSnap = await getDocs(booksCol);
+        const booksSnap = await withTimeout(getDocs(booksCol), 5000, 'Books fetch timeout');
 
-        for (const bDoc of booksSnap.docs) {
-          const bData = bDoc.data();
-          await db.projects.put({
-            id: Number(bData.id) || Number(bDoc.id),
-            userId: currentUser.userId,
-            title: bData.title,
-            author: bData.author,
-            genre: bData.genre,
-            status: bData.status,
-            plotSummary: bData.plotSummary,
-            totalChapters: bData.totalChapters,
-            wordsPerChapter: bData.wordsPerChapter,
-            generateIllustrations: bData.generateIllustrations,
-            extractedStyle: bData.extractedStyle,
-            styleGuideline: bData.styleGuideline,
-            pov: bData.pov,
-            coverPrompt: bData.coverPrompt,
-            coverImageBase64: bData.coverImageBase64,
-            supabaseEpubUrl: bData.supabaseEpubUrl || null,
-            supabaseDocxUrl: bData.supabaseDocxUrl || null,
-            currentChapterIndex: bData.currentChapterIndex || 0,
-            updatedAt: bData.updatedAt || Date.now(),
-            createdAt: bData.createdAt || Date.now()
-          });
+        if (booksSnap && booksSnap.docs) {
+          for (const bDoc of booksSnap.docs) {
+            const bData = bDoc.data();
+            await db.projects.put({
+              id: Number(bData.id) || Number(bDoc.id),
+              userId: currentUser.userId,
+              title: bData.title,
+              author: bData.author,
+              genre: bData.genre,
+              status: bData.status,
+              plotSummary: bData.plotSummary,
+              totalChapters: bData.totalChapters,
+              wordsPerChapter: bData.wordsPerChapter,
+              generateIllustrations: bData.generateIllustrations,
+              extractedStyle: bData.extractedStyle,
+              styleGuideline: bData.styleGuideline,
+              pov: bData.pov,
+              coverPrompt: bData.coverPrompt,
+              coverImageBase64: bData.coverImageBase64,
+              supabaseEpubUrl: bData.supabaseEpubUrl || null,
+              supabaseDocxUrl: bData.supabaseDocxUrl || null,
+              currentChapterIndex: bData.currentChapterIndex || 0,
+              updatedAt: bData.updatedAt || Date.now(),
+              createdAt: bData.createdAt || Date.now()
+            });
 
-          // Fetch chapters subcollection
-          const chCol = collection(firestoreDb, 'users', currentUser.userId, 'books', bDoc.id, 'chapters');
-          const chSnap = await getDocs(chCol);
-          for (const cDoc of chSnap.docs) {
-            const cData = cDoc.data();
-            const existing = await db.chapters.where({ projectId: Number(bData.id) || Number(bDoc.id), chapterNum: cData.chapterNum }).first();
-            if (existing) {
-              await db.chapters.update(existing.id, cData);
-            } else {
-              await db.chapters.add({
-                ...cData,
-                projectId: Number(bData.id) || Number(bDoc.id)
-              });
+            // Fetch chapters subcollection
+            try {
+              const chCol = collection(firestoreDb, 'users', currentUser.userId, 'books', bDoc.id, 'chapters');
+              const chSnap = await withTimeout(getDocs(chCol), 4000, 'Chapters fetch timeout');
+              if (chSnap && chSnap.docs) {
+                for (const cDoc of chSnap.docs) {
+                  const cData = cDoc.data();
+                  const existing = await db.chapters.where({ projectId: Number(bData.id) || Number(bDoc.id), chapterNum: cData.chapterNum }).first();
+                  if (existing) {
+                    await db.chapters.update(existing.id, cData);
+                  } else {
+                    await db.chapters.add({
+                      ...cData,
+                      projectId: Number(bData.id) || Number(bDoc.id)
+                    });
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn('Chapters fetch error for book', bDoc.id, err);
             }
           }
         }
@@ -1500,7 +1621,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
         updateSyncBadge(`Đã đồng bộ ${timeStr}`);
       } catch (err) {
         console.warn('syncAllFromFirestore error:', err);
-        updateSyncBadge('Ngoại tuyến');
+        updateSyncBadge('Ngoại tuyến / Riêng tư');
       }
     }
 
@@ -1509,15 +1630,14 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       if (!firestoreDb || !currentUser) return;
       updateSyncBadge('Đang lưu Cloud...');
       try {
-        await syncApiKeysToFirestore();
+        await withTimeout(syncApiKeysToFirestore(), 4000).catch(() => {});
 
         const projects = await db.projects.toArray();
         for (const proj of projects) {
-          await saveBookToFirestore(proj);
+          await withTimeout(saveBookToFirestore(proj), 4000).catch(() => {});
           const chs = await db.chapters.where('projectId').equals(proj.id).toArray();
-          for (const ch of chs) {
-            await saveChapterToFirestore(proj.id, ch);
-          }
+          // Batch parallel chapter saving to dramatically boost sync speed
+          await Promise.allSettled(chs.map(ch => withTimeout(saveChapterToFirestore(proj.id, ch), 4000)));
         }
 
         const now = new Date();
@@ -4004,6 +4124,79 @@ ${spineItems}
           alert('Lỗi khôi phục: ' + err.message);
         }
       }
+    });
+
+    // ======================================================================
+    // 13.9 CLOUD CONFIG MODAL CONTROLLER
+    // ======================================================================
+    const modalCloudConfig = document.getElementById('modal-cloud-config');
+    function populateCloudConfigForm() {
+      const cfg = CLOUD_CONFIG;
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+      };
+      setVal('cfg-firebase-project-id', cfg.firebase?.projectId);
+      setVal('cfg-firebase-api-key', cfg.firebase?.apiKey);
+      setVal('cfg-firebase-auth-domain', cfg.firebase?.authDomain);
+      setVal('cfg-firebase-storage-bucket', cfg.firebase?.storageBucket);
+
+      setVal('cfg-supabase-url', cfg.supabase?.url);
+      setVal('cfg-supabase-key', cfg.supabase?.anonKey);
+
+      setVal('cfg-cloudinary-cloud', cfg.cloudinary?.cloudName);
+      setVal('cfg-cloudinary-preset', cfg.cloudinary?.uploadPreset);
+    }
+
+    function openCloudConfigModal() {
+      populateCloudConfigForm();
+      modalCloudConfig?.classList.remove('hidden');
+    }
+
+    function closeCloudConfigModal() {
+      modalCloudConfig?.classList.add('hidden');
+    }
+
+    document.getElementById('btn-open-cloud-config')?.addEventListener('click', openCloudConfigModal);
+    document.getElementById('btn-close-cloud-config')?.addEventListener('click', closeCloudConfigModal);
+    document.getElementById('btn-cancel-cloud-config')?.addEventListener('click', closeCloudConfigModal);
+
+    document.getElementById('btn-reset-cloud-config')?.addEventListener('click', () => {
+      if (confirm('Khôi phục lại thông số Cloud mẫu ban đầu?')) {
+        localStorage.removeItem('bookstudio_cloud_config');
+        CLOUD_CONFIG = { ...DEFAULT_CLOUD_CONFIG };
+        populateCloudConfigForm();
+        alert('Đã tải lại thông số cấu hình mặc định. Bấm "Lưu & Tải Lại Kết Nối" để áp dụng.');
+      }
+    });
+
+    document.getElementById('btn-save-cloud-config')?.addEventListener('click', () => {
+      const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+
+      const updatedConfig = {
+        firebase: {
+          projectId: getVal('cfg-firebase-project-id') || DEFAULT_CLOUD_CONFIG.firebase.projectId,
+          apiKey: getVal('cfg-firebase-api-key') || DEFAULT_CLOUD_CONFIG.firebase.apiKey,
+          authDomain: getVal('cfg-firebase-auth-domain') || `${getVal('cfg-firebase-project-id')}.firebaseapp.com`,
+          storageBucket: getVal('cfg-firebase-storage-bucket') || `${getVal('cfg-firebase-project-id')}.appspot.com`,
+          messagingSenderId: DEFAULT_CLOUD_CONFIG.firebase.messagingSenderId,
+          appId: DEFAULT_CLOUD_CONFIG.firebase.appId
+        },
+        supabase: {
+          url: getVal('cfg-supabase-url') || DEFAULT_CLOUD_CONFIG.supabase.url,
+          anonKey: getVal('cfg-supabase-key') || DEFAULT_CLOUD_CONFIG.supabase.anonKey,
+          bucket: DEFAULT_CLOUD_CONFIG.supabase.bucket
+        },
+        cloudinary: {
+          cloudName: getVal('cfg-cloudinary-cloud') || DEFAULT_CLOUD_CONFIG.cloudinary.cloudName,
+          uploadPreset: getVal('cfg-cloudinary-preset') || DEFAULT_CLOUD_CONFIG.cloudinary.uploadPreset,
+          apiKey: DEFAULT_CLOUD_CONFIG.cloudinary.apiKey
+        }
+      };
+
+      localStorage.setItem('bookstudio_cloud_config', JSON.stringify(updatedConfig));
+      alert('Đã lưu cấu hình Cloud thành công! Hệ thống sẽ tải lại để áp dụng cấu hình mới.');
+      window.location.reload();
     });
 
     // ======================================================================
