@@ -129,11 +129,11 @@
           <span class="sm:hidden">Cài</span>
         </button>
 
-        <!-- User Profile & Firestore Sync Status -->
+        <!-- User Profile & Cloud Sync Status -->
         <div id="header-user-section" class="hidden flex items-center gap-1.5 pl-2 border-l border-stone-200">
-          <button id="btn-manual-sync" title="Nhấn để đồng bộ toàn bộ sách từ Firestore" class="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition">
+          <button id="btn-manual-sync" title="Nhấn để đồng bộ toàn bộ sách và API key từ Cloud" class="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition">
             <i data-lucide="cloud" class="w-3.5 h-3.5 text-emerald-600"></i>
-            <span id="sync-status-label" class="hidden lg:inline">Đồng bộ</span>
+            <span id="sync-status-label" class="hidden lg:inline">Đồng bộ Cloud</span>
           </button>
           <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-800">
             <i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-800"></i>
@@ -172,7 +172,7 @@
             <i data-lucide="book-open" class="w-8 h-8"></i>
           </div>
           <h2 class="text-2xl font-bold text-stone-900 font-serif">Book Studio AI</h2>
-          <p class="text-xs text-stone-500">Đồng bộ bản nháp đa thiết bị qua Firestore • Kho lưu trữ Supabase Storage • Bìa sách Cloudinary</p>
+          <p class="text-xs text-stone-500">Đồng bộ bản nháp đa thiết bị • Kho lưu trữ đám mây Cloud • Tự động sao lưu an toàn</p>
         </div>
 
         <!-- Auth Tabs: Login / Register -->
@@ -195,7 +195,7 @@
               <i data-lucide="user" class="w-3.5 h-3.5 text-stone-500"></i>
               Tên tài khoản (Username)
             </label>
-            <input type="text" id="login-username" required placeholder="Ví dụ: nhathoai2026" autocomplete="username" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+            <input type="text" id="login-username" required placeholder="Ví dụ: bookcreator" autocomplete="username" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
           </div>
 
           <div class="space-y-1.5">
@@ -219,7 +219,7 @@
               <i data-lucide="user-plus" class="w-3.5 h-3.5 text-stone-500"></i>
               Tên tài khoản (Username - không cần email)
             </label>
-            <input type="text" id="reg-username" required placeholder="Chữ thường, số (Ví dụ: nhathoai2026)" autocomplete="username" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+            <input type="text" id="reg-username" required placeholder="Chữ thường, số (Ví dụ: bookcreator)" autocomplete="username" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
           </div>
 
           <div class="space-y-1.5">
@@ -246,7 +246,7 @@
 
         <div class="pt-3 border-t border-stone-100 text-center text-[11px] text-stone-500 flex items-center justify-center gap-1.5">
           <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
-          <span>Dữ liệu sách & bản nháp được bảo vệ riêng tư theo tài khoản trên Firestore</span>
+          <span>Dữ liệu sách & bản nháp được bảo vệ riêng tư theo tài khoản trên Cloud</span>
         </div>
       </div>
     </section>
@@ -402,7 +402,7 @@
             <div class="flex items-center justify-between pb-2 border-b border-stone-100">
               <h3 class="font-bold text-stone-900 text-xs sm:text-sm flex items-center gap-2">
                 <i data-lucide="cloud" class="w-4 h-4 text-emerald-700"></i>
-                <span>Hạ Tầng Lưu Trữ & Đồng Bộ Đám Mây</span>
+                <span>Hạ Tầng Lưu Trữ & Đồng Bộ Cloud</span>
               </h3>
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span> Sẵn Sàng
@@ -413,24 +413,24 @@
               <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-100 flex items-start gap-2">
                 <i data-lucide="database" class="w-3.5 h-3.5 text-amber-800 shrink-0 mt-0.5"></i>
                 <div class="space-y-0.5">
-                  <div class="font-semibold text-stone-900">Firestore (State & Bản Nháp Tức Thì)</div>
-                  <div class="text-stone-500">Lưu outline, mục lục, tiến độ từng chương, text nháp 20 chương đang viết để mở máy nào cũng có ngay.</div>
+                  <div class="font-semibold text-stone-900">Đồng Bộ Bản Nháp & Tiến Độ Tức Thì</div>
+                  <div class="text-stone-500">Tự động lưu trữ outline, mục lục, tiến độ từng chương và text nháp các chương đang viết lên Cloud để mở máy nào cũng có ngay.</div>
                 </div>
               </div>
 
               <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-100 flex items-start gap-2">
                 <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5"></i>
                 <div class="space-y-0.5">
-                  <div class="font-semibold text-stone-900">Supabase Storage (File Xuất Bản Đã Xong)</div>
-                  <div class="text-stone-500">Tự động tải lên bucket <span class="font-mono text-emerald-800 font-medium">ebook_done</span> khi xuất file .EPUB và .DOCX hoàn chỉnh.</div>
+                  <div class="font-semibold text-stone-900">Kho Lưu Trữ File Xuất Bản Đã Xong</div>
+                  <div class="text-stone-500">Tự động lưu trữ file xuất bản .EPUB và .DOCX hoàn chỉnh lên Cloud với liên kết tải trực tiếp vĩnh viễn.</div>
                 </div>
               </div>
 
               <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-100 flex items-start gap-2">
                 <i data-lucide="image" class="w-3.5 h-3.5 text-blue-700 shrink-0 mt-0.5"></i>
                 <div class="space-y-0.5">
-                  <div class="font-semibold text-stone-900">Cloudinary (Ảnh Bìa Sách)</div>
-                  <div class="text-stone-500">Lưu trữ ảnh bìa AI tạo hoặc ảnh tải lên theo định danh sách, tối ưu hiển thị nhanh chóng.</div>
+                  <div class="font-semibold text-stone-900">Kho Lưu Trữ Ảnh Bìa Tác Phẩm</div>
+                  <div class="text-stone-500">Lưu trữ ảnh bìa AI tạo hoặc ảnh tải lên theo định danh sách, tối ưu tốc độ tải và hiển thị.</div>
                 </div>
               </div>
             </div>
@@ -823,7 +823,7 @@
         </div>
       </div>
 
-      <!-- Supabase Cloud Storage Finished Books Section -->
+      <!-- Cloud Storage Finished Books Section -->
       <div class="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-4">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2.5">
@@ -831,22 +831,22 @@
               <i data-lucide="cloud-lightning" class="w-5 h-5"></i>
             </div>
             <div>
-              <h3 class="text-base font-bold text-stone-900">Kho Lưu Trữ Thành Phẩm Supabase Storage (Bucket: <code class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">ebook_done</code>)</h3>
-              <p class="text-xs text-stone-500">Khi bạn tải file .EPUB hoặc .DOCX, sách được tự động đẩy lên Supabase và lưu Public URL vĩnh viễn vào Firestore.</p>
+              <h3 class="text-base font-bold text-stone-900">Kho Lưu Trữ Thành Phẩm Trên Cloud</h3>
+              <p class="text-xs text-stone-500">Khi bạn tải file .EPUB hoặc .DOCX, sách được tự động đẩy lên Cloud và lưu Public URL vĩnh viễn.</p>
             </div>
           </div>
           <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i> Supabase Storage Sẵn Sàng
+            <i data-lucide="check" class="w-3.5 h-3.5"></i> Lưu Trữ Cloud Sẵn Sàng
           </span>
         </div>
 
         <div id="supabase-links-container" class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
           <div class="text-xs text-stone-600 flex items-center gap-1.5">
             <i data-lucide="folder-git-2" class="w-4 h-4 text-stone-400"></i>
-            <span>Định dạng đường dẫn: <code>ebook_done/{userId}/{bookId}/tên_sách.ext</code></span>
+            <span>Định dạng đường dẫn: <code>cloud_storage/{userId}/{bookId}/tên_sách.ext</code></span>
           </div>
           <div id="supabase-live-urls" class="space-y-2">
-            <p class="text-xs text-stone-400 italic">Chưa có liên kết tải từ Supabase cho dự án này. Hãy bấm xuất file ở trên để lưu vào kho.</p>
+            <p class="text-xs text-stone-400 italic">Chưa có liên kết tải từ Cloud cho dự án này. Hãy bấm xuất file ở trên để lưu vào kho.</p>
           </div>
         </div>
       </div>
@@ -859,13 +859,21 @@
         </div>
         <p class="text-xs text-stone-500">Toàn bộ dữ liệu tác phẩm và key được lưu trữ an toàn trong IndexedDB của trình duyệt. Bạn có thể sao lưu ra file JSON để đồng bộ sang thiết bị khác.</p>
         <div class="flex flex-wrap items-center gap-3 pt-2">
+          <button id="btn-force-sync" class="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition shadow-xs">
+            <i data-lucide="cloud-download" class="w-4 h-4"></i>
+            Đồng Bộ Từ Cloud Về Máy
+          </button>
+          <button id="btn-force-save-cloud" class="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition shadow-xs">
+            <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+            Lưu Toàn Bộ Lên Cloud
+          </button>
           <button id="btn-backup-json" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
             <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
-            Xuất Dữ Liệu Ra File JSON
+            Xuất File JSON
           </button>
           <label class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer">
             <i data-lucide="hard-drive-upload" class="w-4 h-4"></i>
-            <span>Nhập Dữ Liệu Từ JSON</span>
+            <span>Nhập File JSON</span>
             <input type="file" id="input-restore-json" accept=".json" class="hidden" />
           </label>
         </div>
@@ -1308,7 +1316,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
     }
 
     function logoutUser() {
-      if (confirm('Bạn có chắc chắn muốn đăng xuất tài khoản? Dữ liệu bản nháp đã được lưu an toàn trên Firestore.')) {
+      if (confirm('Bạn có chắc chắn muốn đăng xuất tài khoản? Dữ liệu bản nháp đã được lưu an toàn trên Cloud.')) {
         currentUser = null;
         localStorage.removeItem('bookstudio_auth_user');
         showAuthGate();
@@ -1317,7 +1325,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
     }
 
     // ======================================================================
-    // 3.2 CLOUD SYNC ENGINE: FIRESTORE, SUPABASE STORAGE & CLOUDINARY
+    // 3.2 CLOUD SYNC ENGINE: CLOUD METADATA, BINARY STORAGE & IMAGES
     // ======================================================================
     async function saveBookToFirestore(project) {
       if (!firestoreDb || !currentUser || !project || !project.id) return;
@@ -1345,7 +1353,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
           updatedAt: Date.now()
         }, { merge: true });
 
-        updateSyncBadge('Đã lưu Firestore');
+        updateSyncBadge('Đã lưu Cloud');
       } catch (err) {
         console.warn('saveBookToFirestore error:', err);
       }
@@ -1377,10 +1385,68 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       }
     }
 
+    // Sync API Keys to Cloud for the logged-in user
+    async function syncApiKeysToFirestore() {
+      if (!firestoreDb || !currentUser) return;
+      try {
+        const keys = await db.keys.toArray();
+        const userDocRef = doc(firestoreDb, 'users', currentUser.userId);
+        const keysData = keys.map(k => ({
+          key: k.key,
+          status: k.status || 'active',
+          failCount: k.failCount || 0,
+          unlockAt: k.unlockAt || 0,
+          successCount: k.successCount || 0
+        }));
+        await setDoc(userDocRef, {
+          apiKeys: keysData,
+          apiKeysUpdatedAt: Date.now()
+        }, { merge: true });
+        console.log(`Đã lưu ${keysData.length} API key lên Cloud cho user: ${currentUser.username}`);
+      } catch (err) {
+        console.warn('syncApiKeysToFirestore error:', err);
+      }
+    }
+
+    // Pull API Keys from Cloud for the logged-in user
+    async function syncApiKeysFromFirestore() {
+      if (!firestoreDb || !currentUser) return;
+      try {
+        const userDocRef = doc(firestoreDb, 'users', currentUser.userId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          const uData = userSnap.data();
+          if (Array.isArray(uData.apiKeys) && uData.apiKeys.length > 0) {
+            for (const kItem of uData.apiKeys) {
+              const keyStr = typeof kItem === 'string' ? kItem : kItem.key;
+              if (!keyStr) continue;
+              const exists = await db.keys.where('key').equals(keyStr).first();
+              if (!exists) {
+                await db.keys.add({
+                  key: keyStr,
+                  status: kItem.status || 'active',
+                  failCount: kItem.failCount || 0,
+                  unlockAt: kItem.unlockAt || 0,
+                  successCount: kItem.successCount || 0
+                });
+              }
+            }
+            await renderKeysList();
+          }
+        }
+      } catch (err) {
+        console.warn('syncApiKeysFromFirestore error:', err);
+      }
+    }
+
     async function syncAllFromFirestore() {
       if (!firestoreDb || !currentUser) return;
       updateSyncBadge('Đang đồng bộ...');
       try {
+        // 1. Sync API keys from cloud
+        await syncApiKeysFromFirestore();
+
+        // 2. Sync Books & Chapters
         const booksCol = collection(firestoreDb, 'users', currentUser.userId, 'books');
         const booksSnap = await getDocs(booksCol);
 
@@ -1432,6 +1498,31 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       } catch (err) {
         console.warn('syncAllFromFirestore error:', err);
         updateSyncBadge('Ngoại tuyến');
+      }
+    }
+
+    // Save all local books, chapters, and API keys to Cloud
+    async function saveAllToFirestore() {
+      if (!firestoreDb || !currentUser) return;
+      updateSyncBadge('Đang lưu Cloud...');
+      try {
+        await syncApiKeysToFirestore();
+
+        const projects = await db.projects.toArray();
+        for (const proj of projects) {
+          await saveBookToFirestore(proj);
+          const chs = await db.chapters.where('projectId').equals(proj.id).toArray();
+          for (const ch of chs) {
+            await saveChapterToFirestore(proj.id, ch);
+          }
+        }
+
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        updateSyncBadge(`Đã lưu Cloud ${timeStr}`);
+      } catch (err) {
+        console.warn('saveAllToFirestore error:', err);
+        updateSyncBadge('Lỗi lưu Cloud');
       }
     }
 
@@ -1533,7 +1624,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
               <span class="font-semibold text-stone-800 truncate">${escapeHtml(currentProject.title)}.epub</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-              <a href="${currentProject.supabaseEpubUrl}" target="_blank" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md text-[11px] font-semibold">Tải Từ Supabase</a>
+              <a href="${currentProject.supabaseEpubUrl}" target="_blank" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md text-[11px] font-semibold">Tải Từ Cloud</a>
               <button onclick="navigator.clipboard.writeText('${currentProject.supabaseEpubUrl}'); alert('Đã sao chép liên kết EPUB!');" class="p-1 text-stone-400 hover:text-stone-700 rounded" title="Sao chép link">
                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
               </button>
@@ -1550,7 +1641,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
               <span class="font-semibold text-stone-800 truncate">${escapeHtml(currentProject.title)}.docx</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-              <a href="${currentProject.supabaseDocxUrl}" target="_blank" class="px-2.5 py-1 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-[11px] font-semibold">Tải Từ Supabase</a>
+              <a href="${currentProject.supabaseDocxUrl}" target="_blank" class="px-2.5 py-1 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-[11px] font-semibold">Tải Từ Cloud</a>
               <button onclick="navigator.clipboard.writeText('${currentProject.supabaseDocxUrl}'); alert('Đã sao chép liên kết DOCX!');" class="p-1 text-stone-400 hover:text-stone-700 rounded" title="Sao chép link">
                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
               </button>
@@ -1560,7 +1651,7 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
       }
 
       if (!html) {
-        container.innerHTML = '<p class="text-xs text-stone-400 italic">Chưa có liên kết tải từ Supabase cho dự án này. Hãy bấm xuất file ở trên để lưu vào kho.</p>';
+        container.innerHTML = '<p class="text-xs text-stone-400 italic">Chưa có liên kết tải từ Cloud cho dự án này. Hãy bấm xuất file ở trên để lưu vào kho.</p>';
       } else {
         container.innerHTML = html;
       }
@@ -2863,7 +2954,8 @@ ${spineItems}
 
     window.deleteKey = async function(id) {
       await db.keys.delete(id);
-      renderKeysList();
+      await renderKeysList();
+      await syncApiKeysToFirestore();
     };
 
     async function renderWorkspace() {
@@ -3444,12 +3536,14 @@ ${spineItems}
 
       textarea.value = '';
       await renderKeysList();
+      await syncApiKeysToFirestore();
     });
 
     document.getElementById('btn-clear-keys')?.addEventListener('click', async () => {
       if (confirm('Bạn có chắc muốn xóa toàn bộ API Key?')) {
         await db.keys.clear();
         await renderKeysList();
+        await syncApiKeysToFirestore();
       }
     });
 
@@ -3785,7 +3879,7 @@ ${spineItems}
         hideAuthGate();
         await renderLibrary();
         switchView('settings');
-        alert(`Chúc mừng ${username}! Tài khoản của bạn đã được lưu an toàn lên Firestore. Hãy thêm Gemini API Key và bắt đầu tạo tác phẩm đầu tiên.`);
+        alert(`Chúc mừng ${username}! Tài khoản của bạn đã được khởi tạo và lưu an toàn lên Cloud. Hãy thêm Gemini API Key và bắt đầu tạo tác phẩm đầu tiên.`);
       } catch (err) {
         showAuthAlert(err.message, 'error');
       } finally {
@@ -3798,7 +3892,19 @@ ${spineItems}
     // Logout Button
     document.getElementById('btn-logout')?.addEventListener('click', logoutUser);
 
-    // Force Manual Sync Button
+    // Header Manual Sync Button
+    document.getElementById('btn-manual-sync')?.addEventListener('click', async () => {
+      if (!currentUser) return;
+      const btn = document.getElementById('btn-manual-sync');
+      if (btn) btn.classList.add('animate-pulse');
+      await syncAllFromFirestore();
+      await renderLibrary();
+      if (currentProject) await renderWorkspace();
+      if (btn) btn.classList.remove('animate-pulse');
+      alert('Đồng bộ Cloud thành công! Tất cả sách, bản nháp và API key đã được tải về.');
+    });
+
+    // Force Manual Sync Button (Settings view)
     document.getElementById('btn-force-sync')?.addEventListener('click', async () => {
       if (!currentUser) return;
       const btn = document.getElementById('btn-force-sync');
@@ -3807,7 +3913,17 @@ ${spineItems}
       await renderLibrary();
       if (currentProject) await renderWorkspace();
       if (btn) btn.classList.remove('animate-pulse');
-      alert('Đồng bộ Firestore thành công! Tất cả bản nháp và chương đã được cập nhật.');
+      alert('Đồng bộ Cloud thành công! Tất cả bản nháp và API key đã được cập nhật.');
+    });
+
+    // Force Save All to Cloud Button (Settings view)
+    document.getElementById('btn-force-save-cloud')?.addEventListener('click', async () => {
+      if (!currentUser) return;
+      const btn = document.getElementById('btn-force-save-cloud');
+      if (btn) btn.classList.add('animate-pulse');
+      await saveAllToFirestore();
+      if (btn) btn.classList.remove('animate-pulse');
+      alert('Đã lưu toàn bộ sách, bản nháp các chương và API key lên Cloud thành công!');
     });
 
     // Export Buttons
@@ -3946,6 +4062,20 @@ ${spineItems}
 
       await renderKeysList();
       lucide.createIcons();
+
+      // 4. Periodic polling sync every 30 minutes (NO onSnapshot real-time listener)
+      setInterval(async () => {
+        if (currentUser && navigator.onLine) {
+          console.log('[Cloud Polling] Bắt đầu đồng bộ định kỳ 30 phút...');
+          try {
+            await syncAllFromFirestore();
+            await renderLibrary();
+            if (currentProject) await renderWorkspace();
+          } catch (err) {
+            console.warn('[Cloud Polling] Lỗi đồng bộ định kỳ:', err);
+          }
+        }
+      }, 30 * 60 * 1000); // 30 phút
     }
 
     window.addEventListener('DOMContentLoaded', initApp);
