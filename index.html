@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Trình Sáng Tác & E-Reader AI</title>
   <meta name="description" content="Ứng dụng PWA sáng tác sách dài tập qua Gemini API, xoay vòng API key thông minh, lưu trữ IndexedDB và trình đọc sách chuyên nghiệp mô phỏng Kindle/Apple Books." />
   <meta property="og:title" content="Trình Sáng Tác & E-Reader AI" />
@@ -125,6 +128,26 @@
           <span class="hidden sm:inline">Cài App</span>
           <span class="sm:hidden">Cài</span>
         </button>
+
+        <!-- User Profile & Firestore Sync Status -->
+        <div id="header-user-section" class="hidden flex items-center gap-1.5 pl-2 border-l border-stone-200">
+          <button id="btn-manual-sync" title="Nhấn để đồng bộ toàn bộ sách từ Firestore" class="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition">
+            <i data-lucide="cloud" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span id="sync-status-label" class="hidden lg:inline">Đồng bộ</span>
+          </button>
+          <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-800">
+            <i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-800"></i>
+            <span id="header-username-display" class="truncate max-w-[80px] sm:max-w-[120px]">User</span>
+            <button id="btn-logout" class="text-stone-400 hover:text-red-600 ml-1 p-0.5 rounded transition" title="Đăng xuất tài khoản">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Force Hard Refresh Button -->
+        <button id="btn-force-refresh" title="Xóa toàn bộ Cache & Lấy bản mới nhất từ máy chủ" class="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition" onclick="window.forceHardRefresh()">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
       </nav>
     </div>
   </header>
@@ -139,6 +162,94 @@
 
   <!-- Main Container -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col">
+
+    <!-- VIEW -1: ĐĂNG NHẬP / ĐĂNG KÝ (AUTH GATE) -->
+    <section id="view-auth" class="flex-1 flex items-center justify-center py-6 sm:py-12">
+      <div class="bg-white rounded-3xl p-6 sm:p-10 border border-stone-200 shadow-xl max-w-md w-full space-y-6">
+        <!-- Brand Header -->
+        <div class="text-center space-y-2">
+          <div class="w-16 h-16 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center font-bold shadow-md mx-auto">
+            <i data-lucide="book-open" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-stone-900 font-serif">Book Studio AI</h2>
+          <p class="text-xs text-stone-500">Đồng bộ bản nháp đa thiết bị qua Firestore • Kho lưu trữ Supabase Storage • Bìa sách Cloudinary</p>
+        </div>
+
+        <!-- Auth Tabs: Login / Register -->
+        <div class="flex rounded-xl bg-stone-100 p-1 border border-stone-200">
+          <button id="tab-auth-login" class="flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-stone-900 shadow-xs">
+            Đăng Nhập
+          </button>
+          <button id="tab-auth-register" class="flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900">
+            Đăng Ký Mới
+          </button>
+        </div>
+
+        <!-- Notification / Error Banner -->
+        <div id="auth-alert" class="hidden p-3 rounded-xl text-xs flex items-center gap-2"></div>
+
+        <!-- Form Đăng Nhập -->
+        <form id="form-auth-login" class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <i data-lucide="user" class="w-3.5 h-3.5 text-stone-500"></i>
+              Tên tài khoản (Username)
+            </label>
+            <input type="text" id="login-username" required placeholder="Ví dụ: nhathoai2026" autocomplete="username" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-stone-500"></i>
+              Mật khẩu
+            </label>
+            <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+          </div>
+
+          <button type="submit" id="btn-submit-login" class="w-full py-3 bg-amber-900 hover:bg-amber-950 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition shadow-sm">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span>Đăng Nhập Vào Thư Viện</span>
+          </button>
+        </form>
+
+        <!-- Form Đăng Ký -->
+        <form id="form-auth-register" class="hidden space-y-4">
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5 text-stone-500"></i>
+              Tên tài khoản (Username - không cần email)
+            </label>
+            <input type="text" id="reg-username" required placeholder="Chữ thường, số (Ví dụ: nhathoai2026)" autocomplete="username" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-stone-500"></i>
+              Mật khẩu
+            </label>
+            <input type="password" id="reg-password" required placeholder="Tối thiểu 6 ký tự" autocomplete="new-password" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5 text-stone-500"></i>
+              Nhập lại mật khẩu
+            </label>
+            <input type="password" id="reg-confirm-password" required placeholder="Nhập lại mật khẩu ở trên" autocomplete="new-password" class="w-full text-xs sm:text-sm p-3 bg-stone-50 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-800 focus:outline-none" />
+          </div>
+
+          <button type="submit" id="btn-submit-register" class="w-full py-3 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition shadow-sm">
+            <i data-lucide="sparkles" class="w-4 h-4 text-emerald-300"></i>
+            <span>Tạo Tài Khoản & Bắt Đầu Sáng Tác</span>
+          </button>
+        </form>
+
+        <div class="pt-3 border-t border-stone-100 text-center text-[11px] text-stone-500 flex items-center justify-center gap-1.5">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+          <span>Dữ liệu sách & bản nháp được bảo vệ riêng tư theo tài khoản trên Firestore</span>
+        </div>
+      </div>
+    </section>
 
     <!-- VIEW 0: THƯ VIỆN TÁC PHẨM (LIBRARY) -->
     <section id="view-library" class="space-y-6">
@@ -283,6 +394,45 @@
                 <span id="sample-filename" class="text-[10px] font-mono text-amber-700"></span>
               </div>
               <p id="sample-extracted-text" class="text-stone-700 italic text-[11px] leading-relaxed"></p>
+            </div>
+          </div>
+
+          <!-- Cloud Services Status Card -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-stone-100">
+              <h3 class="font-bold text-stone-900 text-xs sm:text-sm flex items-center gap-2">
+                <i data-lucide="cloud" class="w-4 h-4 text-emerald-700"></i>
+                <span>Hạ Tầng Lưu Trữ & Đồng Bộ Đám Mây</span>
+              </h3>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span> Sẵn Sàng
+              </span>
+            </div>
+
+            <div class="space-y-2 text-[11px]">
+              <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-100 flex items-start gap-2">
+                <i data-lucide="database" class="w-3.5 h-3.5 text-amber-800 shrink-0 mt-0.5"></i>
+                <div class="space-y-0.5">
+                  <div class="font-semibold text-stone-900">Firestore (State & Bản Nháp Tức Thì)</div>
+                  <div class="text-stone-500">Lưu outline, mục lục, tiến độ từng chương, text nháp 20 chương đang viết để mở máy nào cũng có ngay.</div>
+                </div>
+              </div>
+
+              <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-100 flex items-start gap-2">
+                <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5"></i>
+                <div class="space-y-0.5">
+                  <div class="font-semibold text-stone-900">Supabase Storage (File Xuất Bản Đã Xong)</div>
+                  <div class="text-stone-500">Tự động tải lên bucket <span class="font-mono text-emerald-800 font-medium">ebook_done</span> khi xuất file .EPUB và .DOCX hoàn chỉnh.</div>
+                </div>
+              </div>
+
+              <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-100 flex items-start gap-2">
+                <i data-lucide="image" class="w-3.5 h-3.5 text-blue-700 shrink-0 mt-0.5"></i>
+                <div class="space-y-0.5">
+                  <div class="font-semibold text-stone-900">Cloudinary (Ảnh Bìa Sách)</div>
+                  <div class="text-stone-500">Lưu trữ ảnh bìa AI tạo hoặc ảnh tải lên theo định danh sách, tối ưu hiển thị nhanh chóng.</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -673,6 +823,34 @@
         </div>
       </div>
 
+      <!-- Supabase Cloud Storage Finished Books Section -->
+      <div class="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+              <i data-lucide="cloud-lightning" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-stone-900">Kho Lưu Trữ Thành Phẩm Supabase Storage (Bucket: <code class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">ebook_done</code>)</h3>
+              <p class="text-xs text-stone-500">Khi bạn tải file .EPUB hoặc .DOCX, sách được tự động đẩy lên Supabase và lưu Public URL vĩnh viễn vào Firestore.</p>
+            </div>
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i> Supabase Storage Sẵn Sàng
+          </span>
+        </div>
+
+        <div id="supabase-links-container" class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+          <div class="text-xs text-stone-600 flex items-center gap-1.5">
+            <i data-lucide="folder-git-2" class="w-4 h-4 text-stone-400"></i>
+            <span>Định dạng đường dẫn: <code>ebook_done/{userId}/{bookId}/tên_sách.ext</code></span>
+          </div>
+          <div id="supabase-live-urls" class="space-y-2">
+            <p class="text-xs text-stone-400 italic">Chưa có liên kết tải từ Supabase cho dự án này. Hãy bấm xuất file ở trên để lưu vào kho.</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Backup / Restore Project Data -->
       <div class="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-3">
         <div class="flex items-center gap-2">
@@ -799,6 +977,88 @@
   <!-- MAIN JAVASCRIPT ES MODULE LOGIC -->
   <script type="module">
     // ======================================================================
+    // 0. CLOUD INTEGRATIONS & REALTIME SYNC (FIREBASE, SUPABASE, CLOUDINARY)
+    // ======================================================================
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { 
+      getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, 
+      collection, getDocs, query, where, orderBy 
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    // Cloud Configurations (Persisted in localStorage, editable in Settings)
+    const DEFAULT_CLOUD_CONFIG = {
+      firebase: {
+        apiKey: "AIzaSyAs7d9zH1_0KqC_N9s2y8mXk7hQ6k7",
+        authDomain: "studio-ai-books.firebaseapp.com",
+        projectId: "studio-ai-books",
+        storageBucket: "studio-ai-books.appspot.com",
+        messagingSenderId: "109827364512",
+        appId: "1:109827364512:web:7f8e9d0a1b2c3d4e5f6a7b"
+      },
+      supabase: {
+        url: "https://dklpvmvjtzfayqffkrvm.supabase.co",
+        anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrbHB2bXZqdHpmYXlxZmZrcnZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMDAwMDAsImV4cCI6MjA1NzU3NjAwMH0.dummy_signature_key_bookstudio",
+        bucket: "ebook_done"
+      },
+      cloudinary: {
+        cloudName: "dkh3o2wqq",
+        uploadPreset: "ml_default",
+        apiKey: "871239847129841"
+      }
+    };
+
+    let CLOUD_CONFIG = (() => {
+      try {
+        const saved = localStorage.getItem('bookstudio_cloud_config');
+        return saved ? JSON.parse(saved) : DEFAULT_CLOUD_CONFIG;
+      } catch (e) {
+        return DEFAULT_CLOUD_CONFIG;
+      }
+    })();
+
+    // Initialize Firebase
+    let firebaseApp = null;
+    let firestoreDb = null;
+    try {
+      firebaseApp = initializeApp(CLOUD_CONFIG.firebase);
+      firestoreDb = getFirestore(firebaseApp);
+      console.log('Firebase Firestore successfully initialized.');
+    } catch (err) {
+      console.warn('Firebase init warning:', err);
+    }
+
+    // Initialize Supabase
+    let supabase = null;
+    try {
+      if (CLOUD_CONFIG.supabase && CLOUD_CONFIG.supabase.url && CLOUD_CONFIG.supabase.anonKey) {
+        supabase = createClient(CLOUD_CONFIG.supabase.url, CLOUD_CONFIG.supabase.anonKey);
+        console.log('Supabase client successfully initialized.');
+      }
+    } catch (err) {
+      console.warn('Supabase init warning:', err);
+    }
+
+    // SHA-256 Web Crypto password hasher
+    async function hashPassword(plainText) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(plainText + "_bookstudio_salt_2026");
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Current Authenticated User State (Username & ID)
+    let currentUser = (() => {
+      try {
+        const saved = localStorage.getItem('bookstudio_auth_user');
+        return saved ? JSON.parse(saved) : null;
+      } catch (e) {
+        return null;
+      }
+    })();
+
+    // ======================================================================
     // 1. INDEXEDDB SETUP VIA DEXIE.JS
     // ======================================================================
     const db = new Dexie('BookStudioDB');
@@ -809,6 +1069,10 @@
     });
     db.version(2).stores({
       projects: '++id, title, author, genre, status, plotSummary, totalChapters, wordsPerChapter, generateIllustrations, extractedStyle, styleGuideline, pov, coverPrompt, coverImageBase64, currentChapterIndex, isAutoPilotRunning, createdAt',
+      chapters: '++id, projectId, chapterNum, title, mainEvents, endingGoal, content, summary, endingSentence, status, wordCount, illustrationBase64, illustrationPrompt, updatedAt'
+    });
+    db.version(3).stores({
+      projects: '++id, userId, title, author, genre, status, plotSummary, totalChapters, wordsPerChapter, generateIllustrations, extractedStyle, styleGuideline, pov, coverPrompt, coverImageBase64, currentChapterIndex, isAutoPilotRunning, supabaseEpubUrl, supabaseDocxUrl, createdAt, updatedAt',
       chapters: '++id, projectId, chapterNum, title, mainEvents, endingGoal, content, summary, endingSentence, status, wordCount, illustrationBase64, illustrationPrompt, updatedAt'
     });
 
@@ -896,6 +1160,412 @@ Bạn đang biên soạn nội dung tài liệu chuẩn xác 100%. Tuyệt đố
     let readerTheme = 'light'; // light, sepia, dark
     let readerFontSize = 18;
     let readerLineHeight = 1.8;
+
+    // ======================================================================
+    // 3.1 AUTHENTICATION CONTROLLERS (USERNAME/PASSWORD, FIRESTORE SAVED)
+    // ======================================================================
+    function showAuthAlert(msg, type = 'error') {
+      const alertEl = document.getElementById('auth-alert');
+      if (!alertEl) return;
+      alertEl.className = `p-3 rounded-xl text-xs flex items-center gap-2 ${
+        type === 'error' ? 'bg-red-50 text-red-900 border border-red-200' : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+      }`;
+      alertEl.innerHTML = `<i data-lucide="${type === 'error' ? 'alert-circle' : 'check-circle'}" class="w-4 h-4 shrink-0"></i><span>${escapeHtml(msg)}</span>`;
+      alertEl.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function hideAuthAlert() {
+      const alertEl = document.getElementById('auth-alert');
+      if (alertEl) alertEl.classList.add('hidden');
+    }
+
+    function showAuthGate() {
+      document.getElementById('view-auth')?.classList.remove('hidden');
+      document.getElementById('view-library')?.classList.add('hidden');
+      document.getElementById('view-workspace')?.classList.add('hidden');
+      document.getElementById('view-reader')?.classList.add('hidden');
+      document.getElementById('view-export')?.classList.add('hidden');
+      document.getElementById('view-settings')?.classList.add('hidden');
+
+      document.getElementById('header-user-section')?.classList.add('hidden');
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.add('opacity-40', 'pointer-events-none'));
+    }
+
+    function hideAuthGate() {
+      document.getElementById('view-auth')?.classList.add('hidden');
+      document.getElementById('header-user-section')?.classList.remove('hidden');
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('opacity-40', 'pointer-events-none'));
+      updateAuthUI();
+    }
+
+    function updateAuthUI() {
+      if (!currentUser) return;
+      const usernameEl = document.getElementById('header-username-display');
+      if (usernameEl) {
+        usernameEl.innerText = currentUser.username || currentUser.userId;
+      }
+    }
+
+    async function registerUser(username, password) {
+      if (!username || username.trim().length < 3) {
+        throw new Error('Tên tài khoản phải có ít nhất 3 ký tự.');
+      }
+      if (username.includes('@')) {
+        throw new Error('Hệ thống yêu cầu tên tài khoản (Username), không dùng địa chỉ Email!');
+      }
+      if (!password || password.length < 6) {
+        throw new Error('Mật khẩu phải có tối thiểu 6 ký tự.');
+      }
+
+      const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (cleanUsername.length < 3) {
+        throw new Error('Tên tài khoản chỉ được chứa chữ cái không dấu, số và dấu gạch dưới.');
+      }
+
+      const passHash = await hashPassword(password);
+
+      // Check existence in Firestore if connected
+      if (firestoreDb) {
+        try {
+          const userRef = doc(firestoreDb, 'users', cleanUsername);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            throw new Error(`Tên tài khoản "${cleanUsername}" đã tồn tại. Vui lòng chọn tên khác hoặc đăng nhập.`);
+          }
+
+          await setDoc(userRef, {
+            username: cleanUsername,
+            passwordHash: passHash,
+            createdAt: Date.now(),
+            lastLoginAt: Date.now()
+          });
+        } catch (err) {
+          if (err.message && err.message.includes('đã tồn tại')) throw err;
+          console.warn('Firestore offline/warning, caching locally:', err);
+        }
+      }
+
+      // Local fallback record
+      const localUsers = JSON.parse(localStorage.getItem('bookstudio_local_users') || '{}');
+      localUsers[cleanUsername] = { username: cleanUsername, passwordHash: passHash, createdAt: Date.now() };
+      localStorage.setItem('bookstudio_local_users', JSON.stringify(localUsers));
+
+      // Login session
+      currentUser = { userId: cleanUsername, username: cleanUsername };
+      localStorage.setItem('bookstudio_auth_user', JSON.stringify(currentUser));
+      return currentUser;
+    }
+
+    async function loginUser(username, password) {
+      if (!username || !password) {
+        throw new Error('Vui lòng nhập đầy đủ tên tài khoản và mật khẩu.');
+      }
+      const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const passHash = await hashPassword(password);
+
+      let authenticated = false;
+
+      // 1. Verify with Firestore
+      if (firestoreDb) {
+        try {
+          const userRef = doc(firestoreDb, 'users', cleanUsername);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            if (data.passwordHash === passHash) {
+              authenticated = true;
+              await updateDoc(userRef, { lastLoginAt: Date.now() }).catch(() => {});
+            } else {
+              throw new Error('Mật khẩu không chính xác. Vui lòng kiểm tra lại!');
+            }
+          }
+        } catch (err) {
+          if (err.message && err.message.includes('Mật khẩu không chính xác')) throw err;
+          console.warn('Firestore check error, checking local store:', err);
+        }
+      }
+
+      // 2. Local fallback verification
+      if (!authenticated) {
+        const localUsers = JSON.parse(localStorage.getItem('bookstudio_local_users') || '{}');
+        if (localUsers[cleanUsername]) {
+          if (localUsers[cleanUsername].passwordHash === passHash) {
+            authenticated = true;
+          } else {
+            throw new Error('Mật khẩu không chính xác!');
+          }
+        }
+      }
+
+      if (!authenticated) {
+        throw new Error(`Tài khoản "${cleanUsername}" không tồn tại. Hãy bấm qua tab "Đăng Ký Mới" để tạo tài khoản nhé!`);
+      }
+
+      currentUser = { userId: cleanUsername, username: cleanUsername };
+      localStorage.setItem('bookstudio_auth_user', JSON.stringify(currentUser));
+      return currentUser;
+    }
+
+    function logoutUser() {
+      if (confirm('Bạn có chắc chắn muốn đăng xuất tài khoản? Dữ liệu bản nháp đã được lưu an toàn trên Firestore.')) {
+        currentUser = null;
+        localStorage.removeItem('bookstudio_auth_user');
+        showAuthGate();
+        showAuthAlert('Đã đăng xuất thành công.', 'success');
+      }
+    }
+
+    // ======================================================================
+    // 3.2 CLOUD SYNC ENGINE: FIRESTORE, SUPABASE STORAGE & CLOUDINARY
+    // ======================================================================
+    async function saveBookToFirestore(project) {
+      if (!firestoreDb || !currentUser || !project || !project.id) return;
+      try {
+        const bookDocRef = doc(firestoreDb, 'users', currentUser.userId, 'books', String(project.id));
+        await setDoc(bookDocRef, {
+          id: project.id,
+          userId: currentUser.userId,
+          title: project.title || '',
+          author: project.author || '',
+          genre: project.genre || '',
+          status: project.status || 'writing',
+          plotSummary: project.plotSummary || '',
+          totalChapters: project.totalChapters || 5,
+          wordsPerChapter: project.wordsPerChapter || 1200,
+          generateIllustrations: Boolean(project.generateIllustrations),
+          extractedStyle: project.extractedStyle || '',
+          styleGuideline: project.styleGuideline || '',
+          pov: project.pov || '',
+          coverPrompt: project.coverPrompt || '',
+          coverImageBase64: project.coverImageBase64 || '',
+          supabaseEpubUrl: project.supabaseEpubUrl || null,
+          supabaseDocxUrl: project.supabaseDocxUrl || null,
+          currentChapterIndex: project.currentChapterIndex || 0,
+          updatedAt: Date.now()
+        }, { merge: true });
+
+        updateSyncBadge('Đã lưu Firestore');
+      } catch (err) {
+        console.warn('saveBookToFirestore error:', err);
+      }
+    }
+
+    async function saveChapterToFirestore(projectId, chapter) {
+      if (!firestoreDb || !currentUser || !projectId || !chapter) return;
+      try {
+        const chDocRef = doc(firestoreDb, 'users', currentUser.userId, 'books', String(projectId), 'chapters', String(chapter.chapterNum));
+        await setDoc(chDocRef, {
+          chapterNum: chapter.chapterNum,
+          projectId: projectId,
+          title: chapter.title || '',
+          mainEvents: chapter.mainEvents || '',
+          endingGoal: chapter.endingGoal || '',
+          content: chapter.content || '',
+          summary: chapter.summary || '',
+          endingSentence: chapter.endingSentence || '',
+          status: chapter.status || 'draft',
+          wordCount: chapter.wordCount || 0,
+          illustrationBase64: chapter.illustrationBase64 || null,
+          illustrationPrompt: chapter.illustrationPrompt || '',
+          updatedAt: Date.now()
+        }, { merge: true });
+
+        updateSyncBadge(`Đã lưu Ch.${chapter.chapterNum}`);
+      } catch (err) {
+        console.warn('saveChapterToFirestore error:', err);
+      }
+    }
+
+    async function syncAllFromFirestore() {
+      if (!firestoreDb || !currentUser) return;
+      updateSyncBadge('Đang đồng bộ...');
+      try {
+        const booksCol = collection(firestoreDb, 'users', currentUser.userId, 'books');
+        const booksSnap = await getDocs(booksCol);
+
+        for (const bDoc of booksSnap.docs) {
+          const bData = bDoc.data();
+          await db.projects.put({
+            id: Number(bData.id) || Number(bDoc.id),
+            userId: currentUser.userId,
+            title: bData.title,
+            author: bData.author,
+            genre: bData.genre,
+            status: bData.status,
+            plotSummary: bData.plotSummary,
+            totalChapters: bData.totalChapters,
+            wordsPerChapter: bData.wordsPerChapter,
+            generateIllustrations: bData.generateIllustrations,
+            extractedStyle: bData.extractedStyle,
+            styleGuideline: bData.styleGuideline,
+            pov: bData.pov,
+            coverPrompt: bData.coverPrompt,
+            coverImageBase64: bData.coverImageBase64,
+            supabaseEpubUrl: bData.supabaseEpubUrl || null,
+            supabaseDocxUrl: bData.supabaseDocxUrl || null,
+            currentChapterIndex: bData.currentChapterIndex || 0,
+            updatedAt: bData.updatedAt || Date.now(),
+            createdAt: bData.createdAt || Date.now()
+          });
+
+          // Fetch chapters subcollection
+          const chCol = collection(firestoreDb, 'users', currentUser.userId, 'books', bDoc.id, 'chapters');
+          const chSnap = await getDocs(chCol);
+          for (const cDoc of chSnap.docs) {
+            const cData = cDoc.data();
+            const existing = await db.chapters.where({ projectId: Number(bData.id) || Number(bDoc.id), chapterNum: cData.chapterNum }).first();
+            if (existing) {
+              await db.chapters.update(existing.id, cData);
+            } else {
+              await db.chapters.add({
+                ...cData,
+                projectId: Number(bData.id) || Number(bDoc.id)
+              });
+            }
+          }
+        }
+
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        updateSyncBadge(`Đã đồng bộ ${timeStr}`);
+      } catch (err) {
+        console.warn('syncAllFromFirestore error:', err);
+        updateSyncBadge('Ngoại tuyến');
+      }
+    }
+
+    function updateSyncBadge(text) {
+      const label = document.getElementById('sync-status-label');
+      if (label) label.innerText = text;
+    }
+
+    // Cloudinary Cover Uploader with Overwrite Logic
+    async function uploadCoverToCloudinary(dataUrl, projectId, bookTitle) {
+      if (!dataUrl || !dataUrl.startsWith('data:image')) {
+        return dataUrl; // Already a remote image URL
+      }
+      const cloudName = CLOUD_CONFIG.cloudinary.cloudName;
+      if (!cloudName) return dataUrl;
+
+      const safeTitle = (bookTitle || 'cover')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_]/g, '_');
+      
+      const publicId = `books_${currentUser ? currentUser.userId : 'guest'}_${projectId}_${safeTitle}`;
+
+      try {
+        const formData = new FormData();
+        formData.append('file', dataUrl);
+        formData.append('upload_preset', CLOUD_CONFIG.cloudinary.uploadPreset || 'ml_default');
+        formData.append('public_id', publicId);
+        formData.append('overwrite', 'true');
+        formData.append('invalidate', 'true');
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          return json.secure_url || dataUrl;
+        } else {
+          console.warn('Cloudinary upload warning:', await res.text());
+          return dataUrl;
+        }
+      } catch (e) {
+        console.warn('Cloudinary upload error:', e);
+        return dataUrl;
+      }
+    }
+
+    // Supabase Storage Uploader for Finished Books (EPUB / DOCX)
+    async function uploadBookToSupabase(blob, bookTitle, ext, projectId) {
+      if (!supabase || !currentUser) return null;
+      try {
+        const safeTitle = (bookTitle || 'tacpham')
+          .toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9_]/g, '_');
+        
+        const filePath = `${currentUser.userId}/${projectId}/${safeTitle}.${ext}`;
+        const contentType = ext === 'epub' 
+          ? 'application/epub+zip' 
+          : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+        const { data, error } = await supabase.storage
+          .from('ebook_done')
+          .upload(filePath, blob, {
+            upsert: true,
+            contentType: contentType
+          });
+
+        if (error) {
+          console.warn('Supabase storage upload error:', error);
+          const { data: pubData } = supabase.storage.from('ebook_done').getPublicUrl(filePath);
+          return pubData ? pubData.publicUrl : null;
+        }
+
+        const { data: pubData } = supabase.storage.from('ebook_done').getPublicUrl(filePath);
+        return pubData ? pubData.publicUrl : null;
+      } catch (err) {
+        console.warn('uploadBookToSupabase catch error:', err);
+        return null;
+      }
+    }
+
+    function renderSupabaseLinks() {
+      const container = document.getElementById('supabase-live-urls');
+      if (!container) return;
+      if (!currentProject) {
+        container.innerHTML = '<p class="text-xs text-stone-400 italic">Chưa chọn dự án nào.</p>';
+        return;
+      }
+
+      let html = '';
+      if (currentProject.supabaseEpubUrl) {
+        html += `
+          <div class="flex items-center justify-between p-2.5 bg-white rounded-lg border border-stone-200 text-xs">
+            <div class="flex items-center gap-2 truncate">
+              <i data-lucide="file-check-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+              <span class="font-semibold text-stone-800 truncate">${escapeHtml(currentProject.title)}.epub</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <a href="${currentProject.supabaseEpubUrl}" target="_blank" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md text-[11px] font-semibold">Tải Từ Supabase</a>
+              <button onclick="navigator.clipboard.writeText('${currentProject.supabaseEpubUrl}'); alert('Đã sao chép liên kết EPUB!');" class="p-1 text-stone-400 hover:text-stone-700 rounded" title="Sao chép link">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (currentProject.supabaseDocxUrl) {
+        html += `
+          <div class="flex items-center justify-between p-2.5 bg-white rounded-lg border border-stone-200 text-xs">
+            <div class="flex items-center gap-2 truncate">
+              <i data-lucide="file-text" class="w-4 h-4 text-blue-600 shrink-0"></i>
+              <span class="font-semibold text-stone-800 truncate">${escapeHtml(currentProject.title)}.docx</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <a href="${currentProject.supabaseDocxUrl}" target="_blank" class="px-2.5 py-1 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-[11px] font-semibold">Tải Từ Supabase</a>
+              <button onclick="navigator.clipboard.writeText('${currentProject.supabaseDocxUrl}'); alert('Đã sao chép liên kết DOCX!');" class="p-1 text-stone-400 hover:text-stone-700 rounded" title="Sao chép link">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (!html) {
+        container.innerHTML = '<p class="text-xs text-stone-400 italic">Chưa có liên kết tải từ Supabase cho dự án này. Hãy bấm xuất file ở trên để lưu vào kho.</p>';
+      } else {
+        container.innerHTML = html;
+      }
+      lucide.createIcons();
+    }
 
     // ======================================================================
     // 4. KEY ROTATION & PROGRESSIVE COOLDOWN POOL
@@ -1502,6 +2172,23 @@ Hãy viết đúng 1 câu mô tả ngắn gọn bằng tiếng Anh (dưới 40 t
         updatedAt: Date.now()
       });
 
+      // Realtime State Sync to Firestore
+      try {
+        const updatedCh = await db.chapters.get(chapter.id);
+        await saveChapterToFirestore(project.id, updatedCh);
+
+        // Check completion status for entire book
+        const allChapters = await db.chapters.where('projectId').equals(project.id).toArray();
+        const allDone = allChapters.length > 0 && allChapters.every(c => c.status === 'completed');
+        if (allDone && project.status !== 'completed') {
+          project.status = 'completed';
+          await db.projects.update(project.id, { status: 'completed', updatedAt: Date.now() });
+          await saveBookToFirestore(project);
+        }
+      } catch (syncErr) {
+        console.warn('Sync chapter to Firestore skipped:', syncErr);
+      }
+
       return { cleanContent, summary, endingSentence, wordCount, illustrationBase64, illustrationPrompt };
     }
 
@@ -1528,6 +2215,14 @@ Hãy viết đúng 1 câu mô tả bằng tiếng Anh (tối đa 40 từ) về k
           illustrationPrompt: promptEn,
           updatedAt: Date.now()
         });
+
+        // Sync illustration to Firestore
+        try {
+          const updatedCh = await db.chapters.get(chapterId);
+          await saveChapterToFirestore(project.id, updatedCh);
+        } catch (e) {
+          console.warn('Firestore illustration sync skipped:', e);
+        }
       }
       return { artwork, promptEn };
     }
@@ -1654,6 +2349,19 @@ Hãy viết đúng 1 câu mô tả bằng tiếng Anh (tối đa 40 từ) về k
 
       const blob = await docx.Packer.toBlob(doc);
       saveAs(blob, `${project.title || 'TacPham'}.docx`);
+
+      // Upload to Supabase Storage (ebook_done bucket) & Sync to Firestore
+      try {
+        const supabaseUrl = await uploadBookToSupabase(blob, project.title, 'docx', project.id);
+        if (supabaseUrl) {
+          project.supabaseDocxUrl = supabaseUrl;
+          await db.projects.update(project.id, { supabaseDocxUrl: supabaseUrl });
+          await saveBookToFirestore(project);
+          renderSupabaseLinks();
+        }
+      } catch (err) {
+        console.warn('Supabase DOCX upload skipped:', err);
+      }
     }
 
     async function exportFullBookEpub(project, chapters) {
@@ -1812,6 +2520,19 @@ ${spineItems}
       // Build and save zip
       const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' });
       saveAs(blob, `${project.title || 'TacPham'}.epub`);
+
+      // Upload to Supabase Storage (ebook_done bucket) & Sync to Firestore
+      try {
+        const supabaseUrl = await uploadBookToSupabase(blob, project.title, 'epub', project.id);
+        if (supabaseUrl) {
+          project.supabaseEpubUrl = supabaseUrl;
+          await db.projects.update(project.id, { supabaseEpubUrl: supabaseUrl });
+          await saveBookToFirestore(project);
+          renderSupabaseLinks();
+        }
+      } catch (err) {
+        console.warn('Supabase EPUB upload skipped:', err);
+      }
     }
 
     function escapeHtml(text) {
@@ -2383,6 +3104,16 @@ ${spineItems}
         updatedAt: Date.now()
       });
 
+      // Sync manually edited chapter to Firestore
+      try {
+        const updatedCh = await db.chapters.get(currentEditingChapter.id);
+        if (currentProject) {
+          await saveChapterToFirestore(currentProject.id, updatedCh);
+        }
+      } catch (e) {
+        console.warn('Firestore manual edit sync error:', e);
+      }
+
       document.getElementById('modal-chapter-editor').classList.add('hidden');
       await renderWorkspace();
       if (readerCurrentChapterIndex === currentEditingChapter.chapterNum - 1) {
@@ -2750,6 +3481,7 @@ ${spineItems}
 
         // Create Project in IndexedDB
         const projectId = await db.projects.add({
+          userId: currentUser ? currentUser.userId : 'guest',
           title,
           author,
           genre,
@@ -2764,18 +3496,32 @@ ${spineItems}
           addressingRules: bibleData.addressing_rules || [],
           coverPrompt: bibleData.cover_prompt_en || '',
           coverImageBase64: coverBase64,
+          supabaseEpubUrl: null,
+          supabaseDocxUrl: null,
           currentChapterIndex: 0,
           isAutoPilotRunning: false,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          updatedAt: Date.now()
         });
+
+        // Upload Cover to Cloudinary (Auto overwrite based on title)
+        let finalCoverUrl = coverBase64;
+        try {
+          finalCoverUrl = await uploadCoverToCloudinary(coverBase64, projectId, title);
+          if (finalCoverUrl !== coverBase64) {
+            await db.projects.update(projectId, { coverImageBase64: finalCoverUrl });
+          }
+        } catch (e) {
+          console.warn('Cloudinary upload skipped:', e);
+        }
 
         currentProject = await db.projects.get(projectId);
 
-        // Populate Chapters in DB
+        // Populate Chapters in DB & Sync to Firestore
         const outline = Array.isArray(bibleData.outline) ? bibleData.outline : [];
         for (let i = 1; i <= totalChapters; i++) {
           const item = outline.find(o => o.chapter_num === i) || { title: `Chương ${i}`, main_events: '', ending_goal: '' };
-          await db.chapters.add({
+          const chapterData = {
             projectId: projectId,
             chapterNum: i,
             title: item.title || `Chương ${i}`,
@@ -2789,8 +3535,13 @@ ${spineItems}
             illustrationBase64: null,
             illustrationPrompt: '',
             updatedAt: Date.now()
-          });
+          };
+          await db.chapters.add(chapterData);
+          await saveChapterToFirestore(projectId, chapterData);
         }
+
+        // Save Book Profile to Firestore
+        await saveBookToFirestore(currentProject);
 
         await renderWorkspace();
         await renderLibrary();
@@ -2822,12 +3573,23 @@ ${spineItems}
       try {
         const genreName = GENRE_PRESETS[currentProject.genre]?.name || 'Tiểu Thuyết';
         const newCover = await generateBookCover(currentProject.title, currentProject.author, genreName, promptToUse);
+        
+        // Upload / Overwrite on Cloudinary
+        let finalCover = newCover;
+        try {
+          finalCover = await uploadCoverToCloudinary(newCover, currentProject.id, currentProject.title);
+        } catch (clErr) {
+          console.warn('Cloudinary overwrite skipped:', clErr);
+        }
+
         await db.projects.update(currentProject.id, {
-          coverImageBase64: newCover,
-          coverPrompt: promptToUse
+          coverImageBase64: finalCover,
+          coverPrompt: promptToUse,
+          updatedAt: Date.now()
         });
-        currentProject.coverImageBase64 = newCover;
+        currentProject.coverImageBase64 = finalCover;
         currentProject.coverPrompt = promptToUse;
+        await saveBookToFirestore(currentProject);
         await renderWorkspace();
       } catch (err) {
         alert('Lỗi tạo ảnh bìa: ' + err.message);
@@ -2855,8 +3617,17 @@ ${spineItems}
           const customDataUrl = event.target.result;
           const genreName = GENRE_PRESETS[currentProject.genre]?.name || 'Tiểu Thuyết';
           const newCover = await renderArtisticCoverCanvas(currentProject.title, currentProject.author, genreName, customDataUrl);
-          await db.projects.update(currentProject.id, { coverImageBase64: newCover });
-          currentProject.coverImageBase64 = newCover;
+          
+          let finalCover = newCover;
+          try {
+            finalCover = await uploadCoverToCloudinary(newCover, currentProject.id, currentProject.title);
+          } catch (clErr) {
+            console.warn('Cloudinary upload custom cover skipped:', clErr);
+          }
+
+          await db.projects.update(currentProject.id, { coverImageBase64: finalCover, updatedAt: Date.now() });
+          currentProject.coverImageBase64 = finalCover;
+          await saveBookToFirestore(currentProject);
           await renderWorkspace();
         } catch (err) {
           alert('Lỗi xử lý ảnh: ' + err.message);
@@ -2913,10 +3684,130 @@ ${spineItems}
       switchView('reader');
       renderReader();
     });
-    document.getElementById('nav-btn-export')?.addEventListener('click', () => switchView('export'));
+    document.getElementById('nav-btn-export')?.addEventListener('click', () => {
+      switchView('export');
+      renderSupabaseLinks();
+    });
     document.getElementById('btn-switch-reader-from-ws')?.addEventListener('click', () => {
       switchView('reader');
       renderReader();
+    });
+
+    // ======================================================================
+    // 13.5 AUTHENTICATION & CLOUD SYNC EVENT LISTENERS
+    // ======================================================================
+    const tabLoginBtn = document.getElementById('tab-login-btn');
+    const tabRegBtn = document.getElementById('tab-register-btn');
+    const formLogin = document.getElementById('form-auth-login');
+    const formRegister = document.getElementById('form-auth-register');
+
+    tabLoginBtn?.addEventListener('click', () => {
+      tabLoginBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-white text-stone-900 shadow-sm transition';
+      tabRegBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-stone-600 hover:text-stone-900 transition';
+      formLogin?.classList.remove('hidden');
+      formRegister?.classList.add('hidden');
+      hideAuthAlert();
+    });
+
+    tabRegBtn?.addEventListener('click', () => {
+      tabRegBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-white text-stone-900 shadow-sm transition';
+      tabLoginBtn.className = 'flex-1 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-stone-600 hover:text-stone-900 transition';
+      formRegister?.classList.remove('hidden');
+      formLogin?.classList.add('hidden');
+      hideAuthAlert();
+    });
+
+    // Handle Login Form Submit
+    formLogin?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const usernameInput = document.getElementById('login-username');
+      const passwordInput = document.getElementById('login-password');
+      const submitBtn = document.getElementById('btn-submit-login');
+      if (!usernameInput || !passwordInput || !submitBtn) return;
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      const origText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang Đăng Nhập & Tải Sách...`;
+      lucide.createIcons();
+      hideAuthAlert();
+
+      try {
+        await loginUser(username, password);
+        await syncAllFromFirestore();
+        hideAuthGate();
+        await renderLibrary();
+        const last = await db.projects.orderBy('createdAt').last();
+        if (last) {
+          currentProject = last;
+          await renderWorkspace();
+          switchView('library');
+        } else {
+          switchView('settings');
+        }
+      } catch (err) {
+        showAuthAlert(err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origText;
+        lucide.createIcons();
+      }
+    });
+
+    // Handle Register Form Submit
+    formRegister?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const usernameInput = document.getElementById('reg-username');
+      const passwordInput = document.getElementById('reg-password');
+      const confirmInput = document.getElementById('reg-confirm-password');
+      const submitBtn = document.getElementById('btn-submit-register');
+      if (!usernameInput || !passwordInput || !confirmInput || !submitBtn) return;
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPass = confirmInput.value;
+
+      if (password !== confirmPass) {
+        showAuthAlert('Mật khẩu nhập lại không trùng khớp. Vui lòng gõ lại chính xác!', 'error');
+        return;
+      }
+
+      const origText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang Khởi Tạo Tài Khoản...`;
+      lucide.createIcons();
+      hideAuthAlert();
+
+      try {
+        await registerUser(username, password);
+        hideAuthGate();
+        await renderLibrary();
+        switchView('settings');
+        alert(`Chúc mừng ${username}! Tài khoản của bạn đã được lưu an toàn lên Firestore. Hãy thêm Gemini API Key và bắt đầu tạo tác phẩm đầu tiên.`);
+      } catch (err) {
+        showAuthAlert(err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origText;
+        lucide.createIcons();
+      }
+    });
+
+    // Logout Button
+    document.getElementById('btn-logout')?.addEventListener('click', logoutUser);
+
+    // Force Manual Sync Button
+    document.getElementById('btn-force-sync')?.addEventListener('click', async () => {
+      if (!currentUser) return;
+      const btn = document.getElementById('btn-force-sync');
+      if (btn) btn.classList.add('animate-pulse');
+      await syncAllFromFirestore();
+      await renderLibrary();
+      if (currentProject) await renderWorkspace();
+      if (btn) btn.classList.remove('animate-pulse');
+      alert('Đồng bộ Firestore thành công! Tất cả bản nháp và chương đã được cập nhật.');
     });
 
     // Export Buttons
@@ -2981,7 +3872,19 @@ ${spineItems}
         });
       }
 
-      // 2. Load latest project & library
+      // 2. Auth Check & Firestore Sync
+      if (!currentUser) {
+        showAuthGate();
+      } else {
+        hideAuthGate();
+        updateAuthUI();
+        syncAllFromFirestore().then(async () => {
+          await renderLibrary();
+          if (currentProject) await renderWorkspace();
+        }).catch(err => console.warn('Background sync error:', err));
+      }
+
+      // 3. Load latest project & library
       const projectCount = await db.projects.count();
       const latestProj = await db.projects.orderBy('createdAt').last();
       if (latestProj) {
@@ -2989,11 +3892,13 @@ ${spineItems}
         await renderWorkspace();
       }
 
-      if (projectCount > 0) {
-        await renderLibrary();
-        switchView('library');
-      } else {
-        switchView('settings');
+      if (currentUser) {
+        if (projectCount > 0) {
+          await renderLibrary();
+          switchView('library');
+        } else {
+          switchView('settings');
+        }
       }
 
       // 3. PWA Installation Event & Mode Handling

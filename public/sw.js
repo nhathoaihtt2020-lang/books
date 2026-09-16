@@ -1,5 +1,5 @@
-// Service Worker for BookStudio PWA
-const CACHE_NAME = 'bookstudio-v3';
+// Service Worker for BookStudio PWA - Version 4
+const CACHE_NAME = 'bookstudio-v4';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,12 @@ const STATIC_ASSETS = [
   './icon-192.png',
   './icon-512.png'
 ];
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -29,13 +35,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Do not intercept Gemini/external generative APIs
-  if (event.request.url.includes('googleapis.com') || event.request.url.includes('pollinations.ai')) {
+  // Do not cache third-party cloud APIs (Firebase, Supabase, Cloudinary, Gemini, Pollinations)
+  const url = event.request.url;
+  if (
+    url.includes('googleapis.com') ||
+    url.includes('firebase') ||
+    url.includes('supabase.co') ||
+    url.includes('cloudinary.com') ||
+    url.includes('pollinations.ai')
+  ) {
     return;
   }
 
-  // Network-First for HTML/Navigation: Ensures user always sees latest version on GitHub Pages/Web
-  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+  // Network-First for HTML/Navigation: Always fetch fresh HTML from server/GitHub Pages
+  if (event.request.mode === 'navigate' || event.request.destination === 'document' || url.endsWith('.html') || url.endsWith('/')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -52,11 +65,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-First with Network fallback for static assets
+  // Cache-First with Network fallback for static vendor scripts and fonts
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).then((response) => {
-        if (response && response.status === 200 && (event.request.url.includes('unpkg.com') || event.request.url.includes('cdnjs.cloudflare.com') || event.request.url.includes('fonts.googleapis.com'))) {
+        if (response && response.status === 200 && (url.includes('unpkg.com') || url.includes('cdnjs.cloudflare.com') || url.includes('fonts.googleapis.com') || url.includes('jsdelivr.net'))) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
